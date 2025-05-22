@@ -93,3 +93,28 @@ SHOW_HITBOXES = False
 SHOW_FPS = True
 INVINCIBLE_MODE = False #For testing
 
+DEFAULT_LEVEL_WIDTH = 100
+DEFAULT_LEVEL_HEIGHT = 20
+GROUND_HEIGHT = 3
+
+ANIMATION_SPEED = 0.1
+COIN_SPIN_SPEED = 0.15
+ENEMY_WALK_SPEED = 0.2
+
+SCORE_COIN = 100
+SCORE_ENEMY_STOMP = 200
+SCORE_LEVEL_COMPLETE = 1000
+EXTRA_LIFE_SCORE = 10000
+
+FRICTION = 0.8
+AIR_RESISTANCE = 0.95
+JUMP_BUFFER_TIME = 0.1
+COYOTE_TIME = 0.1  #Seconds player can jump after leaving platform
+
+GAME_STATES = {
+    "MENU": 'menu',
+    "PLAYING": 'playing',
+    "PAUSED": 'paused',
+    "GAME_OVER": 'game_over',
+    "LEVEL_COMPLETE": 'level_complete'
+}
