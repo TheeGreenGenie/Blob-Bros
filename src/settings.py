@@ -75,3 +75,21 @@ MUSIC_FILES = {
     'overworld': f"{SOUNDS_PATH}/music/overworld.ogg",
     'underground': f"{SOUNDS_PATH}/music/underground.ogg"
 }
+
+SKY_BLUE = (135, 206, 235)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
+
+SCORE_COLOR = WHITE
+LIVES_COLOR = RED
+TIMER_COLOR = YELLOW
+
+DEBUG_MODE = True
+SHOW_HITBOXES = False
+SHOW_FPS = True
+INVINCIBLE_MODE = False #For testing
+
