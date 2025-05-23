@@ -21,4 +21,26 @@ class PhysicsConstants:
     COLLISION_TOLERANCE = 0.1
     GROUND_DETECTION_OFFSET = 1
 
-class 
+class PhysicsBody:
+    #body that can be attached to sprites for advanced physics
+    def __init__(self, sprite, mass=1.0, friction = 1.0, bounce =0.0):
+        self.sprite = sprite
+        self.mass = mass
+        self.friction = friction
+        self.bounce = bounce
+
+        self.velocity_x = 0
+        self.velocity_y = 0
+        self.previous_x = sprite.center_x
+        self.previous_y = sprite.center_y
+
+        self.on_ground = False
+        self.on_wall = False
+        self.wall_direction = 0
+
+        self.applied_forces_x = []
+        self.applied_forces_y = []
+
+    def apply_force(self, force_x, force_y):
+        self.applied_forces_x.append(force_x)
+        self.applied_forces_y.append(force_y)
