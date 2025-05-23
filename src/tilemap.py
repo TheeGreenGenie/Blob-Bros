@@ -34,4 +34,27 @@ class Tile(arcade.Sprite):
             self._create_placeholder_texture()
 
     def _create_placeholder_texture(self):
+        #Create a texture based on tile
+        color_map = {
+            TileType.GROUND: settings.GREEN,
+            TileType.BRICK: (139, 69, 19),
+            TileType.QUESTION_BLOCK: settings.YELLOW,
+            TileType.PIPE: (34, 139, 34),
+            TileType.COIN: (255, 215, 0)
+        }
+
+        color = color_map.get(self.tile_type, settings.WHITE)
+
+        temp_sprite = arcade.SpriteSolidColor(settings.TILE_SIZE, settings.TILE_SIZE, color)
+        self.texture = temp_sprite.texture
+
+    def on_collision(self, other_sprite, collision_side):
+        #Handle sprite collision
+        if self.tile_type == TileType.QUESTION_BLOCK:
+            if collision_side == 'bottom':
+                self.activate_question_block()
         
+        elif self.tile_type == TileType.BRICK and self.destructible:
+            if collision_side == 'bottom':
+                if  hasattr(other_sprite, 'power_level') and other_sprite.power_level > 0:
+                    self.destroy_brick()
