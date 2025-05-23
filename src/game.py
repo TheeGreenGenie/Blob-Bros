@@ -71,3 +71,44 @@ class PlatformGame(arcade.Window):
 
     def create_test_level(self):
         #Simple test level with platforms & coins, will be replaced
+
+        for x in range(0, 800, settings.TILE_SIZE):  # Ground Platforms
+            wall = arcade.SpriteSolidColor(
+                settings.TILE_SIZE,
+                settings.TILE_SIZE,
+                settings.GREEN
+            )
+            wall.center_x = x
+            wall.center_y = settings.TILE_SIZE // 2
+            self.wall_list.append(wall)
+
+        platform_data = [
+            (300, 150),
+            (500, 200),
+            (700, 250),
+        ]
+
+        for x, y in platform_data:
+            for offset in range(0, settings.TILE_SIZE * 3, settings.TILE_SIZE):
+                wall = arcade.SpriteSolidColor(
+                    settings.TILE_SIZE,
+                    settings.TILE_SIZE,
+                    settings.GREEN
+                )
+        
+        coin_positions = [
+            (200, 100),
+            (400, 250),
+            (600, 300),
+            (350, 250),
+        ]
+
+        for x, y in coin_positions:
+            coin = arcade.SpriteSolidColor(
+                settings.COIN_SIZE,
+                settings.COIN_SIZE,
+                settings.YELLOW
+            )
+            coin.center_x = x
+            coin.center_y = y
+            self.coin_list.append(coin)
