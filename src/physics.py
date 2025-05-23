@@ -137,14 +137,18 @@ class CollisionDetector:
                     moving_sprite.change_y = 0
 
 class PlatformPhysicsEngine:
-    def __init__(self, player_sprite, platforms, gravity=None):
+    def __init__(self, player_sprite, platforms, gravity=None, interactive_tiles=None):
         self.player_sprite = player_sprite
         self.platforms = platforms
+        self.interactive_tiles = interactive_tiles or arcade.SpriteList()
         self.gravity = gravity or PhysicsConstants.GRAVITY
 
         self.player_on_ground = False
         self.player_on_wall = False
         self.wall_direction = 0
+
+        self.last_collision_tiles = set()
+        self.collision_cooldown = {}
 
         if not hasattr(player_sprite, 'physics_body'):
             player_sprite.physics_body = PhysicsBody(player_sprite)
