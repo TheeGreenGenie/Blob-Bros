@@ -180,3 +180,22 @@ class PlayerInputHandler:
     def __int__(self, player):
         self.player = player
         self.keys_pressed = set()
+
+    def on_key_press(self, key, modifiers):
+        self.keys_pressed.add(key)
+
+        if key == arcade.key.SPACE:
+            self.player.jump()
+
+        elif key == arcade.key.LEFT:
+            self.player.move_left()
+        elif key == arcade.key.RIGHT:
+            self.player.move_right()
+
+    def on_key_release(self, key, modifiers):
+        if key in self.keys_pressed:
+            self.keys_pressed.remove(key)
+        
+        if key in (arcade.key.LEFT, arcade.key.RIGHT):
+            if arcade.key.LEFT not in self.keys_pressed and arcade.key.RIGHT not in self.keys_pressed:
+                self.player.stop_moving()
