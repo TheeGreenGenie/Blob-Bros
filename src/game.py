@@ -10,7 +10,7 @@ class PlatformGame(arcade.Window):
         #initialize game window
         super().__init__(
             settings.SCREEN_WIDTH,
-            settings.SCRREEN_HEIGHT,
+            settings.SCREEN_HEIGHT,
             settings.SCREEN_TITLE
         )
 
@@ -38,3 +38,36 @@ class PlatformGame(arcade.Window):
         self.frame_count = 0
 
         self.show_debug = settings.DEBUG_MODE
+
+    def setup(self):
+        #Setup game and initialize starting vars, called after creating window
+
+        self.player_list = arcade.SpriteList()
+        self.wall_list = arcade.SpriteList(use_spatial_hash=True)
+        self.coin_list = arcade.SpriteList(use_spatial_hash=True)
+        self.enemy_list = arcade.SpriteList()
+
+        self.camera = arcade.Camera(settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+        self.gui_camera = arcade.Camera(settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+
+        self.player_sprite = arcade.SpriteSolidColor(
+            settings.PLAYER_SIZE,
+            settings.PLAYER_SIZE,
+            settings.RED
+        )
+        self.player_sprite.center_x = settings.PLAYER_START_X
+        self.player_sprite.center_y = settings.PLAYER_START_Y
+        self.player_list.append(self.player_sprite)
+
+        self.create_test_level()
+
+        self.physics_engine = arcade.PhysicsEnginePlatformer(
+            self.player_sprite,
+            self.wall_list,
+            gravity_constant=settings.GRAVITY
+        )
+
+        print("Game setup complete!")
+
+    def create_test_level(self):
+        #Simple test level with platforms & coins, will be replaced
