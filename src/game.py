@@ -1,7 +1,7 @@
 #Main game class
 
 import arcade
-from . import settings
+import settings
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -47,8 +47,8 @@ class PlatformGame(arcade.Window):
         self.coin_list = arcade.SpriteList(use_spatial_hash=True)
         self.enemy_list = arcade.SpriteList()
 
-        self.camera = arcade.Camera(settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
-        self.gui_camera = arcade.Camera(settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+        self.camera = arcade.camera.Camera2D()
+        self.gui_camera = arcade.camera.Camera2D()
 
         self.player_sprite = arcade.SpriteSolidColor(
             settings.PLAYER_SIZE,
@@ -209,18 +209,30 @@ class PlatformGame(arcade.Window):
 
     def update_camera(self):
         #update camera to follow player
+        target_x = self.player_sprite.center_x - 400
+        target_y = self.player_sprite.center_y - 300
+        
+        # Don't scroll past the left edge
+        if target_x < 0:
+            target_x = 0
+            
+        # Don't scroll below ground level
+        if target_y < 0:
+            target_y = 0
+        
+        # Get current camera position
+        current_x, current_y = self.camera.position
+        
+        # Smoothly interpolate toward target position
+        # The closer to 1.0, the faster the camera follows
+        follow_speed = 0.1  # Adjust this for different feel (0.05 = slow, 0.2 = fast)
+        
+        new_x = current_x + (target_x - current_x) * follow_speed
+        new_y = current_y + (target_y - current_y) * follow_speed
+        
+        # Set the new camera position
+        self.camera.position = (new_x, new_y)
 
-        screen_center_x = self.player_sprite.center_x - (self.camera.viewport_width / 2)
-        screen_center_y = self.player_sprite.center_y - (self.camera.viewport_height / 2)
-
-        if screen_center_x < 0:
-            screen_center_x = 0
-
-        if screen_center_y < 0:
-            screen_center_y = 0
-
-        player_centered = screen_center_x, screen_center_y
-        self.camera.move_to(player_centered, settings.CAMERA_SPEED)
     
     def check_game_state(self):
         #Checks for level or game over
@@ -269,4 +281,29 @@ class PlatformGame(arcade.Window):
             elif self.current_state == settings.GAME_STATES["PAUSED"]:
                 self.current_state = settings.GAME_STATES["PLAYING"]
 
-    def o
+    def on_key_release(self, key, modifiers):
+        
+        if key == arcade.key.LEFT or key == arcade.key.RIGHT:
+            self.player_sprite.change_x = 0
+
+    def restart_game(self):
+        #Restart game from beginnning
+
+        self.score = 0
+        self.lives = settings.PLAYER_LIVES
+        self.level_complete = False
+        self.current_state = settings.GAME_STATES["PLAYING"]
+
+        self.respawn_player()
+
+        self.coin_list = arcade.SpriteList(use_spatial_hash=True)
+        self.create_test_level()
+
+def main():
+    #runs the game
+    game = PlatformGame()
+    game.setup()
+    arcade.run()
+
+if __name__ == "__main__":
+    main()
