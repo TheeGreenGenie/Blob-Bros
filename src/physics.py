@@ -78,4 +78,62 @@ class PhysicsBody:
         self.sprite.center_x += self.velocity_x * delta_time * 60  # assuming 60 fps
         self.sprite.center_y += self.velocity_y * delta_time * 60
 
+class CollisionDetector:
+
+    @staticmethod
+    def check_collision_detailed(sprite1, sprite2):
+        if not arcade.check_for_collision(sprite1, sprite2):
+            return None
+        
+        left1, right1 = sprite1.left, sprite1.right
+        top1, bottom1 = sprite1.top, sprite1.bottom
+        left2, right2, = sprite2.left, sprite2.right
+        top2, bottom2 = sprite2.top, sprite2.bottom
+
+        overlap_x = min(right1, right2) - max(left1, left2)
+        overlap_y = min(top1, top2) - max(bottom1, bottom2)
+
+        center1_x, center1_y = sprite1.center_x, sprite1.center_y
+        center2_x, center2_y = sprite2.center_x, sprite2.center_y
+
+        direction_x = 1 if center1_x > center2_x else -1
+        direction_y = 1 if center1_y > center2_y else -1
+
+        return {
+            'overlap x': overlap_x,
+            'overlap y': overlap_y,
+            'direction_x': direction_x,
+            'direction_y': direction_y,
+            'from_above': center1_y > center2_y,
+            'from_below': center1_y < center2_y,
+            'from_left': center1_x < center2_x,
+            'from_right': center1_y > center2_x
+        }
+
+    @staticmethod
+    def resolve_collision(moving_sprite, static_sprite, collision_info):
+        if not collision_info:
+            return
+        
+        overlap_x = collision_info['overlap_x']
+        overlap_y = collision_info['overlap_y']
+
+        if overlap_x < overlap_y:
+            if collision_info['from_left']:
+                moving_sprite.right = static_sprite.left
+            else:
+                moving_sprite.left = static_sprite.right
+            
+            moving_sprite.change_x = 0
+
+        else:
+            if collision_info['from_above']:
+                moving_sprite.bottom = static_sprite.top
+                if moving_sprite.change_y < 0:
+                    moving_sprite.change_y = 0
+            else:
+                moving_sprite.top = static_sprite.bottom
+                if moving_sprite.change_y > 0:
+                    moving_sprite.change_y = 0
+
 
