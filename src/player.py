@@ -161,4 +161,22 @@ class Player(arcade.Sprite):
 
     def draw_debug(self, camera_x=0, camera_y=0):
         if settings.SHOW_HITBOXES:
-            
+            arcade.draw_rect_outline(
+                self.center_x - camera_x,
+                self.center_y - camera_y,
+                self.width,
+                self.height,
+                settings.YELLOW,
+                2 
+            )
+
+        if settings.DEBUG_MODE:
+            indicator_x = self.center_x + (self.facing_direction * 20) - camera_x
+            indicator_y = self.center_y + 20 - camera_y
+            arcade.draw_circle_filled(indicator_x, indicator_y, 3, settings.GREEN)
+
+class PlayerInputHandler:
+    
+    def __int__(self, player):
+        self.player = player
+        self.keys_pressed = set()
