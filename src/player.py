@@ -35,4 +35,47 @@ class Player(arcade.Sprite):
         self.friction = settings.FRICTION
         self.air_resistance = settings.AIR_RESISTANCE
 
-    def setup(self, start_x, start_y)
+    def setup(self, start_x, start_y):
+        #set player at starting pos
+        self.center_x = start_x
+        self.center_y = start_y
+        self.change_x = 0
+        self.change_y = 0
+
+    def update(self):
+        #Update state animations & timers
+        self.update_timers()
+        self.was_on_ground = self.is_on_ground
+
+        if self.is_on_ground and not self.is_moving:
+            self.change_x *= self.friction
+
+        if not self.is_on_ground:
+            self.change_x *= self.air_resistance
+
+        if self.change_x > 0:
+            self.facing_direction = 1
+        elif self.change_x < 0:
+            self.facing_direction = -1
+
+        self.update_animation_state()
+
+        if self.invulnerable:
+            self.invulnerable_timer -= 1/60  #Assuming 60 fps, change this with fps
+            if self.invulnerable_timer <= 0:
+                self.invulnerable = False
+
+    def update_timers(self):
+        #jump buffer & coyote time timers
+        if self.jump_buffer_timer > 0:
+            self.jump_buffer_timer -= 1/60  #Assuming 60 fps
+
+        if self.was_on_ground and not self.is_on_ground:
+            self.coyote_timer = settings.COYOTE_TIME
+        elif self.is_on_ground:
+            self.coyote_timer = 0
+        elif self.coyote_timer > 0:
+            self.coyote_timer -= 1/60
+
+    def update_animation_state(self):
+        
