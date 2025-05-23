@@ -232,4 +232,14 @@ class PlatformGame(arcade.Window):
             self.level_complete = True
             #Maybe add something here after completion? - come back later
 
+    def player_die(self):
+        self.lives -= 1
+
+        if self.lives <= 0:
+            self.current_state = settings.GAME_STATES["GAME_OVER"]
+            print("Game Over!")
+        else:
+            self.respawn_player()
+
+    
     
