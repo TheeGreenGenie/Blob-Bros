@@ -58,3 +58,5 @@ class Tile(arcade.Sprite):
             if collision_side == 'bottom':
                 if  hasattr(other_sprite, 'power_level') and other_sprite.power_level > 0:
                     self.destroy_brick()
+
+    
