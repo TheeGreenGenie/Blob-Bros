@@ -78,4 +78,13 @@ class Player(arcade.Sprite):
             self.coyote_timer -= 1/60
 
     def update_animation_state(self):
-        
+        #Finds right animation
+        if not self.is_on_ground:
+            if self.change_y > 0:
+                self.current_animation = 'jumping'
+            else:
+                self.current_animation = 'falling'
+        elif abs(self.change_x) > 0.5:
+            self.current_animation = 'running'
+        else:
+            self.current_animation = 'idle'
