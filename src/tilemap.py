@@ -145,3 +145,44 @@ class TileMap:
                     self.enemy_spawns.append((pixel_x, pixel_y))
                 elif tile_type == TileType.LEVEL_END:
                     self.level_end = (pixel_x, pixel_y)
+    def draw(self):
+        self.background_list.draw()
+        self.wall_list.draw()
+        self.interactive_list.draw()
+
+class TileMapLoader:
+    
+    @staticmethod
+    def load_from_json(filename):
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+
+            width = data.get('width', 50)
+            height = data.get('height', 20)
+            tile_size = data.get('tile_size', settings.TILE_SIZE)
+
+            tilemap = TileMap(width, height, tile_size)
+            tilemap.name = data.get('name', os.path.basename(filename))
+
+            tile_data = data.get('tiles', [])
+            for y in range(height):
+                for x in range(width):
+                    if y < len(tile_data) and x < len(tile_data[y]):
+                        tilemap.set_tile(x, y, tile_data[y][x])
+
+            if 'player_spawn' in data:
+                spawn = data['player_spawn']
+                tilemap.player_spawn = (spawn['x'], spawn['y'])
+
+            if 'enemy_spawns' in data:
+                tilemap.enemy_spawns = [(spawn['x'], spawn['y']) for spawn in data['enemy_spawns']]
+
+            tilemap.create_sprites()
+            return tilemap
+
+        except Exception as e:
+            print(f"Error loading tilemap from {filename}: {e}")
+            return None
+        
+        @staticmethod
