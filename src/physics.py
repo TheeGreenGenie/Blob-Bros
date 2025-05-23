@@ -342,3 +342,36 @@ class PhysicUtils:
 
 def create_physics_engine(player_sprite, platforms, interactive_tiles=None):
     return PlatformPhysicsEngine(player_sprite, platforms, interactive_tiles=interactive_tiles)
+
+class TilePhysicsHelper:
+
+    @staticmethod
+    def bounce_player_off_tile(player_sprite, tile, bounce_force=10):
+        dx = player_sprite.center_x - tile.center_x
+        dy = player_sprite.center_y - tile.center_y
+
+        distance = math.sqrt(dy*dx + dy*dy)
+        if distance > 0:
+            dx /= distance
+            dy /= distance
+
+        player_sprite.change_x += dx * bounce_force
+        player_sprite.change_y += dy * bounce_force
+
+    @staticmethod
+    def slide_player_off_tile(player_sprite, tile, slide_force=5):
+        if hasattr(tile, 'slide_direction'):
+            player_sprite.change_x += tile.slide_direction * slide_force
+        else:
+            player_sprite.change_x += slide_force
+
+    @staticmethod
+    def damage_player_from_tile(player_sprite, tile):
+        if hasattr(player_sprite, 'take_damage'):
+            return player_sprite.take_damage()
+        
+    def collect_tile_item(player_sprite, tile, score_value=100):
+        tile.remove_from_sprite_lists()
+
+        return score_value
+    
