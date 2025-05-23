@@ -88,3 +88,32 @@ class Player(arcade.Sprite):
             self.current_animation = 'running'
         else:
             self.current_animation = 'idle'
+
+    def move_left(self):
+        self.change_x = -self.speed
+        self.is_moving =True
+
+    def move_right(self):
+        self.change_x = self.speed
+        self.is_moving = True
+
+    def stop_moving(self):
+        self.is_moving = False
+
+    def jump(self):
+        self.jump_buffer_timer = settings.JUMP_BUFFER_TIME
+        return self.try_jump()
+    
+    def try_jump(self):
+        #determines whether a jump is possible
+        can_jump = (self.is_on_ground or self.coyote_timer > 0) and self.jump_buffer_timer > 0
+
+        if can_jump:
+            self.change_y = self.jump_speed
+            self.jump_buffer_timer = 0
+            self.coyote_timer = 0
+            return True
+        
+        return False
+    
+    
