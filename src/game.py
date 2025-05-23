@@ -178,3 +178,33 @@ class PlatformGame(arcade.Window):
         self.player_list.update()
         self.coin_list.update()
         self.enemy_list.update()
+
+        self.check_collisions()
+
+        self.update_camera()
+
+        self.check_game_state()
+
+    def check_collisions(self):
+        coin_hit_list  = arcade.check_for_collision_with_list(
+            self.player_sprite,
+            self.coin_list
+        )
+
+        for coin in coin_hit_list:
+            coin.remove_from_sprite_lists()
+            self.score += settings.COIN_VALUE
+
+            #Play sound when we load it
+            # sound_manage.play_sound("coin")
+
+        #Check for player-enemy collision (after adding enemies)
+        # enemy_hit_list = arcade.check_for_collision_with_list(
+        #     self.player_sprite,
+        #     self.enemy_list
+        # )
+
+        # if enemy_hit_list and not settings.INVINCIBLE_MODE:
+        #     self.plaer_die()
+
+    
