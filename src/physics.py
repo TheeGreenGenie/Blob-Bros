@@ -157,31 +157,62 @@ class PlatformPhysicsEngine:
         return self.player_on_ground
     
     def update(self):
+        #Updated phsyics updating
+
+        self.update_collision_cooldowns()
+
         prev_x = self.player_sprite.center_x
-        prev_y = self.player_sprite.center_y
+        prev_y  = self.player_sprite.center_y
 
         self.player_sprite.change_y -= self.gravity
 
         if self.player_sprite.change_y < -PhysicsConstants.TERMINAL_VELOCITY:
-            self.player_sprite.change_y = -PhysicsConstants.TERMINAL_VELOCITY
+            self.player_sprite = -PhysicsConstants.TERMINAL_VELOCITY
 
         self.player_sprite.center_x += self.player_sprite.change_x
+
+        self.check_horizontal_collisions()
+
+        self.player_sprite.center_y += self.player_sprite.change_y
+
+        self.check_vertical_collisions()
+
+        self.check_interactive_tile_collisions()
+
+        if hasattr(self.player_sprite, 'set_ground_state'):
+            self.player_sprite.set_ground_state(self.player_on_ground)
+
+    def update_collision_cooldowns(self):
+        current_time = arcade.get_time()
+        expired_tiles = []
+
+        for tile_id, cooldown_time, in self.collision_cooldown.items():
+            if current_time > cooldown_time:
+                expired_tiles.append(tile_id)
+        
+        for tile_id in expired_tiles:
+            del self.collision_cooldown[tile_id]
+
+    def check_horizontal_collisions(self):
+        self.player_on_wall = False
 
         hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.platforms)
         for platform in hit_list:
             collision_info = CollisionDetector.check_collision_detailed(self.player_sprite, platform)
-            if collision_info:
+            if collision_info and collision_info['overlap_x'] < collision_info['overlap_y']:
                 CollisionDetector.resolve_collision(self.player_sprite, platform, collision_info)
 
-                if collision_info['from_left'] or collision_info['from_right']:
-                    self.player_on_wall = True
-                    self.wall_direction = collision_info['direction_x']
+                self.player_on_wall =True
+                self.wall_direction = collision_info['direction_x']
 
-        self.player_sprite.center_y += self.player_sprite.change_y
+                if hasattr(platform, 'on_collision'):
+                    side = 'left' if collision_info['from_left'] else 'right'
+                    platform.on_collision(self.player_sprite, side)
 
+    def check_vertical_collisions(self):
         self.player_on_ground = False
-        hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.platforms)
 
+        hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.platforms)
         for platform in hit_list:
             collision_info = CollisionDetector.check_collision_detailed(self.player_sprite, platform)
             if collision_info:
@@ -189,13 +220,43 @@ class PlatformPhysicsEngine:
 
                 if collision_info['from_above'] and self.player_sprite.change_y <= 0:
                     self.player_on_ground = True
-        
-        if not any(hit_list):
-            self.player_on_wall = False
-            self.wall_direction = 0
+                    side = 'top'
+                elif collision_info['from_below'] and self.player_sprite.change_y >= 0:
+                    side = 'bottom'
+                else:
+                    continue
 
-        if hasattr(self.player_sprite, 'set_ground_state'):
-            self.player_sprite.set_ground_state(self.player_on_ground)
+                if hasattr(platform, 'on_collision'):
+                    platform.on_collision(self.player_sprite, side)
+
+    def check_interactive_tile_collisions(self):
+        hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.interactive_tiles)
+        current_collision_tiles = set()
+
+        for tile in hit_list:
+            tile_id = id(tile)
+            current_collision_tiles.add(tile_id)
+
+            if tile_id in self.collision_cooldown:
+                continue
+
+            collision_info = CollisionDetector.check_collision_detailed(self.player_sprite, tile)
+            if collision_info:
+                if collision_info['from_above']:
+                    side = 'top'
+                elif collision_info['from_below']:
+                    side = 'bottom'
+                elif collision_info['from_left']:
+                    side = 'left'
+                else:
+                    side= 'right'
+
+                if hasattr(tile, 'on_collision'):
+                    tile.on_collision(self.player_sprite, side)
+
+                self.collision_cooldown[tile_id] = arcade.get_time() + 0.5
+        
+        self.last_collision_tiles = current_collision_tiles
 
     def add_platform(self, platform):
         self.platforms.append(platform)
@@ -203,6 +264,42 @@ class PlatformPhysicsEngine:
     def remove_platform(self, platform):
         if platform in self.platforms:
             self.platforms.remove(platform)
+
+    def add_interactive_tile(self, tile):
+        self.interactive_tiles.append(tile)
+
+    def remove_interactive_tile(self, tile):
+        if tile in self.interactive_tiles:
+            self.interactive_tiles.remove(tile)
+            tile_id = id(tile)
+            if tile_id in self.collision_cooldown:
+                del self.collision_cooldown[tile_id]
+            if tile_id in self.last_collision_tiles:
+                self.last_collision_tiles.remove(tile_id)
+
+    def check_tile_collision_at_position(self, x, y, tile_list):
+        original_x = self.player_sprite.center_x
+        original_y = self.player_sprite.center_y
+
+        self.player_sprite.center_x = x
+        self.player_sprite.center_y = y
+
+        collision = len(arcade.check_for_collision_with_list(self.player_sprite, tile_list)) > 0
+
+        self.player_sprite.center_x = original_x
+        self.player_sprite.center_y = original_y
+
+        return collision
+    
+    def get_tiles_in_range(self, center_x, center_y, range_distance, tile_list):
+        tiles_in_range = []
+
+        for tile in tile_list:
+            distance = math.sqrt((tile.center_x - center_x)**2 + (tile.center_y - center_y)**2)
+            if distance <= range_distance:
+                tiles_in_range.append(tile)
+
+        return tiles_in_range
 
 class PhysicUtils:
 
