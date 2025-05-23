@@ -73,3 +73,75 @@ class Tile(arcade.Sprite):
 
         print(f"Brick destroyed at ({self.center_x}, {self.center_y})")
 
+class TileMap:
+    #Level with multiple layers
+
+    def __init__(self, width, height, tile_size=None):
+        self.width = width
+        self.height = height
+        self.tile_size = tile_size or settings.TILE_SIZE
+
+        self.wall_list = arcade.SpriteList(use_spatial_hash=True)
+        self.background_list = arcade.SpriteList(use_spatial_hash=True)
+        self.interactive_list = arcade.SpriteList()
+
+        self.tiles = [[TileType.EMPTY for _ in range(width)] for _ in range(height)]
+
+        self.player_spawn = (100, 200) #def spawn point
+        self.enemy_spawns = []
+        self.level_end = None
+
+        self.name = "Untitled Level"
+        self.background_color = settings.SKY_BLUE
+
+    def set_tile(self, x, y, tile_type):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.tiles[y][x] = tile_type
+
+    def get_tile(self, x, y):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            return self.tiles[y][x]
+        return TileType.EMPTY
+    
+    def grid_to_pixel(self, grid_x, grid_y):
+        #multiplies grid into pixels
+        pixel_x = grid_x * self.tile_size + self.tile_size // 2
+        pixel_y = grid_y * self.tile_size + self.tile_size // 2
+        return pixel_x, pixel_y
+    
+    def pixel_to_grid(self, pixel_x, pixel_y):
+        #divides pixels into grid
+        grid_x = int(pixel_x // self.tile_size)
+        grid_y = int(pixel_y // self.tile_size)
+        return grid_x, grid_y
+    
+    def create_sprites(self):
+        self.wall_list.clear()
+        self.background_list.clear()
+        self.interactive_list.clear()
+
+        for y in range(self.height):
+            for x in range(self.width):
+                tile_type = self.tiles[y][x]
+
+                if tile_type == TileType.EMPTY:
+                    continue
+
+                tile = Tile(tile_type)
+                pixel_x, pixel_y = self.grid_to_pixel(x, y)
+                tile.center_x = pixel_x
+                tile.center_y = pixel_y
+
+                if tile.is_solid:
+                    self.wall_list.append(tile)
+                elif tile.is_interactive:
+                    self.interactive_list.append(tile)
+                else:
+                    self.background_list.append(tile)
+            
+                if tile_type == TileType.PLAYER_SPAWN:
+                    self.player_spawn = (pixel_x, pixel_y)
+                elif tile_type == TileType.ENEMY_SPAWN:
+                    self.enemy_spawns.append((pixel_x, pixel_y))
+                elif tile_type == TileType.LEVEL_END:
+                    self.level_end = (pixel_x, pixel_y)
