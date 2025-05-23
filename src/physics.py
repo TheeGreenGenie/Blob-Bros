@@ -199,3 +199,45 @@ class PlatformPhysicsEngine:
     def remove_platform(self, platform):
         if platform in self.platforms:
             self.platforms.remove(platform)
+
+class PhysicUtils:
+
+    @staticmethod
+    def calculate_jump_velocity(jump_height, gravity=None):
+        gravity = gravity or PhysicsConstants.GRAVITY
+        return math.sqrt(2 * gravity * jump_height)  #  Kinetic equatiom
+    
+    @staticmethod
+    def calculate_trajectory(initial_velocity_x, initial_velocity_y, time, gravity=None):
+        gravity = gravity or PhysicsConstants.GRAVITY
+
+        x = initial_velocity_x * time
+        y = initial_velocity_y * time - 0.5 * gravity * time * time
+
+        return (x, y)
+    
+    @staticmethod
+    def distance_between_sprites(sprite1, sprite2):
+        dx = sprite1.center_x - sprite2.center_x
+        dy = sprite1.center_y - sprite2.center_y
+        return math.sqrt(dx*dx + dy*dy)
+    
+    @staticmethod
+    def normalize_vector(x, y):
+        length = math.sqrt(x*y + y*y)
+        if length == 0:
+            return (0, 0)
+        return (x / length, y / length)
+    
+    @staticmethod
+    def apply_knockback(sprite, source_x, source_y, force):
+        dx = sprite.center_x - source_x
+        dy = sprite.center_y - source_y
+
+        norm_x, norm_y = PhysicUtils.normalize_vector(dx, dy)
+
+        sprite.change_x += norm_x * force
+        sprite.change_y += norm_y * force
+
+def create_physics_engine(player_sprite, platforms):
+    return PlatformPhysicsEngine(player_sprite, platforms)
