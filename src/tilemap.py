@@ -185,4 +185,52 @@ class TileMapLoader:
             print(f"Error loading tilemap from {filename}: {e}")
             return None
         
-        @staticmethod
+    @staticmethod
+    def load_from_tiled_tmx(filename):
+        #Update if arcade's tmx loader is not working
+        print(f"For TMX files, use arcade.load_tilemap('{filename}') directly")
+        return None
+    
+    @staticmethod
+    def create_test_level():
+        #level to text functionality
+        tilemap = TileMap(50, 20)
+        tilemap.name = "Test Level"
+
+        for x in range(50):
+            tilemap.set_tile(x, 0, TileType.GROUND)
+            tilemap.set_tile(x, 1, TileType.GROUND)
+
+        platform_data = [
+            (10, 15, 5),
+            (20, 25, 8),
+            (30, 35, 6),
+            (40, 45, 10)
+        ]
+
+        for start_x, end_x, y in platform_data:
+            for x in range(start_x, end_x):
+                tilemap.set_tile(x, y, TileType.GROUND)
+
+        tilemap.set_tile(12, 6, TileType.QUESTION_BLOCK)
+        tilemap.set_tile(22, 9, TileType.QUESTION_BLOCK)
+        tilemap.set_tile(32, 7, TileType.BRICK)
+        tilemap.set_tile(33, 7, TileType.BRICK)
+        tilemap.set_tile(34, 7, TileType.BRICK)
+
+        coin_positions = [(15, 10), (25, 12), (35, 8), (5, 5)]
+        for x, y in coin_positions:
+            tilemap.set_tile(x, y, TileType.COIN)
+
+        tilemap.player_spawn = tilemap.grid_to_pixel(3, 3)
+
+        enemy_positions = [(18, 6), (28, 9), (38, 7)]
+        for x, y in enemy_positions:
+            tilemap.set_tile(x, y, TileType.ENEMY_SPAWN)
+            tilemap.enemy_spawns.append(tilemap.grid_to_pixel(x, y))
+
+        tilemap.set_tile(48, 5, TileType.LEVEL_END)
+        tilemap.level_end = tilemap.grid_to_pixel(48, 5)
+
+        tilemap.create_sprites()
+        return tilemap
