@@ -44,3 +44,38 @@ class PhysicsBody:
     def apply_force(self, force_x, force_y):
         self.applied_forces_x.append(force_x)
         self.applied_forces_y.append(force_y)
+
+    def apply_impulse(self, impulse_x, impulse_y):
+        self.velocity_x += impulse_x / self.mass
+        self.velocity_y += impulse_y / self.mass
+
+    def update(self, delta_time):
+        total_force_x = sum(self.applied_forces_x)
+        total_force_y = sum(self.applied_forces_y)
+
+        self.applied_forces_x.clear()
+        self.applied_forces_y.clear()
+
+        self.velocity_x += (total_force_x / self.mass) * delta_time
+        self.velocity_y += (total_force_y / self.mass) * delta_time
+
+        if self.on_ground:
+            friction_force = self.velocity_x * self.friction * PhysicsConstants.PLAYER_FRICTION
+            self.velocity_x -= friction_force * delta_time
+
+            if abs(self.velocity_x) < PhysicsConstants.SLIDE_THRESHOLD:
+                self.velocity_x = 0
+
+        if not self.on_ground:
+            self.velocity_x *= PhysicsConstants.PLAYER_AIR_RESISTANCE
+
+        if self.velocity_y < PhysicsConstants.TERMINAL_VELOCITY:
+            self.velocity_y = -PhysicsConstants.TERMINAL_VELOCITY
+
+        self.previous_x = self.sprite.center_x
+        self.previous_y = self.sprite.center_y
+
+        self.sprite.center_x += self.velocity_x * delta_time * 60  # assuming 60 fps
+        self.sprite.center_y += self.velocity_y * delta_time * 60
+
+
