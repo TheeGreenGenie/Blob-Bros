@@ -241,5 +241,32 @@ class PlatformGame(arcade.Window):
         else:
             self.respawn_player()
 
+    def respawn_player(self):
+        #Respawn at starting position
+        self.player_sprite.center_x = settings.PLAYER_START_X
+        self.player_sprite.center_y = settings.PLAYER_START_Y
+        self.player_sprite.change_x = 0
+        self.player_sprite.change_y = 0
+
+    def on_key_press(self, key, modifiers):
+        
+        if key == arcade.key.SPACE:
+            if self.physics_engine.can_jump():
+                self.player_sprite.change_y = settings.PLAYER_JUMP_SPEED
+
+        elif key == arcade.key.LEFT:
+            self.player_sprite.change_x = -settings.PLAYER_MOVEMENT_SPEED
+        elif key == arcade.key.RIGHT:
+            self.player_sprite.change_x = settings.PLAYER_MOVEMENT_SPEED
     
-    
+        #toggle debug mode
+        elif key == arcade.key.F1:
+            self.show_debug = not self.show_debug
+
+        elif key == arcade.key.P:
+            if self.current_state == settings.GAME_STATES["PLAYING"]:
+                self.current_state = settings.GAME_STATES["PAUSED"]
+            elif self.current_state == settings.GAME_STATES["PAUSED"]:
+                self.current_state = settings.GAME_STATES["PLAYING"]
+
+    def o
