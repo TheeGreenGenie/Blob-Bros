@@ -136,4 +136,66 @@ class CollisionDetector:
                 if moving_sprite.change_y > 0:
                     moving_sprite.change_y = 0
 
+class PlatformPhysicsEngine:
+    def __init__(self, player_sprite, platforms, gravity=None):
+        self.player_sprite = player_sprite
+        self.platforms = platforms
+        self.gravity = gravity or PhysicsConstants.GRAVITY
 
+        self.player_on_ground = False
+        self.player_on_wall = False
+        self.wall_direction = 0
+
+        if not hasattr(player_sprite, 'physics_body'):
+            player_sprite.physics_body = PhysicsBody(player_sprite)
+
+    def can_jump(self):
+        return self.player_on_ground
+    
+    def update(self):
+        prev_x = self.player_sprite.center_x
+        prev_y = self.player_sprite.center_y
+
+        self.player_sprite.change_y -= self.gravity
+
+        if self.player_sprite.change_y < -PhysicsConstants.TERMINAL_VELOCITY:
+            self.player_sprite.change_y = -PhysicsConstants.TERMINAL_VELOCITY
+
+        self.player_sprite.center_x += self.player_sprite.change_x
+
+        hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.platforms)
+        for platform in hit_list:
+            collision_info = CollisionDetector.check_collision_detailed(self.player_sprite, platform)
+            if collision_info:
+                CollisionDetector.resolve_collision(self.player_sprite, platform, collision_info)
+
+                if collision_info['from_left'] or collision_info['from_right']:
+                    self.player_on_wall = True
+                    self.wall_direction = collision_info['direction_x']
+
+        self.player_sprite.center_y += self.player_sprite.change_y
+
+        self.player_on_ground = False
+        hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.platforms)
+
+        for platform in hit_list:
+            collision_info = CollisionDetector.check_collision_detailed(self.player_sprite, platform)
+            if collision_info:
+                CollisionDetector.resolve_collision(self.player_sprite, platform, collision_info)
+
+                if collision_info['from_above'] and self.player_sprite.change_y <= 0:
+                    self.player_on_ground = True
+        
+        if not any(hit_list):
+            self.player_on_wall = False
+            self.wall_direction = 0
+
+        if hasattr(self.player_sprite, 'set_ground_state'):
+            self.player_sprite.set_ground_state(self.player_on_ground)
+
+    def add_platform(self, platform):
+        self.platforms.append(platform)
+
+    def remove_platform(self, platform):
+        if platform in self.platforms:
+            self.platforms.remove(platform)
