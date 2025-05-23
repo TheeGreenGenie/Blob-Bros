@@ -116,4 +116,49 @@ class Player(arcade.Sprite):
         
         return False
     
+    def set_ground_state(self, on_ground):
+        self.is_on_ground = on_ground
+
+    def take_damage(self):
+        if self.invulnerable:
+            return False
+        
+        if self.power_level > 0:
+            self.power_level -= 1
+            self.make_invulnerable(2.0)
+            return False
+        else:
+            return True
+        
+    def make_invulnerable(self, duration):
+        self.invulnerable = True
+        self.invulnerable_timer = duration
+
+    def power_up(self, power_type=1):
+        if self.power_level < power_type:
+            self.power_level = power_type
+            #Change sprite texture based on power level - come back to this
     
+    def reset_to_checkpoint(self, x, y):
+        self.center_x = x
+        self.center_y = y
+        self.change_x = 0
+        self.change_y = 0
+        self.is_on_ground = False
+        self.invulnerable = False
+        self.invulnerable_timer = 0
+
+    def get_debug_info(self):
+        return {
+            'position': (int(self.center_x), int(self.center_y)),
+            'velocity': (round(self.change_x), round(self.change_y)),
+            'on_ground': self.is_on_ground,
+            'facing': 'right' if self.facing_direction > 0 else 'left',
+            'animation': self.current_animation,
+            'power_level': self.power_level,
+            'invulnerable': self.invulnerable
+        }
+
+    def draw_debug(self, camera_x=0, camera_y=0):
+        if settings.SHOW_HITBOXES:
+            
