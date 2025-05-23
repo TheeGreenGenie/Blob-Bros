@@ -279,3 +279,6 @@ def load_level(filename):
     else:
         print(f"Unsupported file format: {ext}")
         return TileMapLoader.create_test_level()
+    
+def create_simple_level():
+    return TileMapLoader.create_test_level()
