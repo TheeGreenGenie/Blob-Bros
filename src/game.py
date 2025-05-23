@@ -3,6 +3,7 @@
 import arcade
 import settings
 from user import Player, PlayerInputHandler
+from physics import PlatformPhysicsEngine
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -60,10 +61,11 @@ class PlatformGame(arcade.Window):
 
         self.create_test_level()
 
-        self.physics_engine = arcade.PhysicsEnginePlatformer(
+        self.physics_engine = PlatformPhysicsEngine(
             self.player_sprite,
             self.wall_list,
-            gravity_constant=settings.GRAVITY
+            gravity=settings.GRAVITY,
+            interactive_tiles=self.coin_list
         )
 
         print("Game setup complete!")
