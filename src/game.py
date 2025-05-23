@@ -2,6 +2,7 @@
 
 import arcade
 import settings
+from user import Player, PlayerInputHandler
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -24,6 +25,7 @@ class PlatformGame(arcade.Window):
         self.enemy_list  = None
 
         self.player_sprite = None
+        self.player_input = None
 
         self.physics_engine = None # For Collisions & Movement
 
@@ -50,14 +52,11 @@ class PlatformGame(arcade.Window):
         self.camera = arcade.camera.Camera2D()
         self.gui_camera = arcade.camera.Camera2D()
 
-        self.player_sprite = arcade.SpriteSolidColor(
-            settings.PLAYER_SIZE,
-            settings.PLAYER_SIZE,
-            settings.RED
-        )
-        self.player_sprite.center_x = settings.PLAYER_START_X
-        self.player_sprite.center_y = settings.PLAYER_START_Y
+        self.player_sprite = Player()
+        self.player_sprite.setup(settings.PLAYER_START_X, settings.PLAYER_START_Y)
         self.player_list.append(self.player_sprite)
+
+        self.player_input = PlayerInputHandler(self.player_sprite)
 
         self.create_test_level()
 
@@ -173,7 +172,9 @@ class PlatformGame(arcade.Window):
         
         self.frame_count += 1
 
+        self.player_input.update()
         self.physics_engine.update()
+        self.player_sprite.set_ground_state(self.physics_engine.can_jump())
 
         self.player_list.update()
         self.coin_list.update()
@@ -261,18 +262,10 @@ class PlatformGame(arcade.Window):
         self.player_sprite.change_y = 0
 
     def on_key_press(self, key, modifiers):
-        
-        if key == arcade.key.SPACE:
-            if self.physics_engine.can_jump():
-                self.player_sprite.change_y = settings.PLAYER_JUMP_SPEED
-
-        elif key == arcade.key.LEFT:
-            self.player_sprite.change_x = -settings.PLAYER_MOVEMENT_SPEED
-        elif key == arcade.key.RIGHT:
-            self.player_sprite.change_x = settings.PLAYER_MOVEMENT_SPEED
-    
+        #Calls player class for movement and universal controls f1 & p
+        self.player_input.on_key_press(key, modifiers)
         #toggle debug mode
-        elif key == arcade.key.F1:
+        if key == arcade.key.F1:
             self.show_debug = not self.show_debug
 
         elif key == arcade.key.P:
@@ -282,9 +275,7 @@ class PlatformGame(arcade.Window):
                 self.current_state = settings.GAME_STATES["PLAYING"]
 
     def on_key_release(self, key, modifiers):
-        
-        if key == arcade.key.LEFT or key == arcade.key.RIGHT:
-            self.player_sprite.change_x = 0
+        self.player_input.on_key_release(key, modifiers)
 
     def restart_game(self):
         #Restart game from beginnning

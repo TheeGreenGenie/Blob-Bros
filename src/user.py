@@ -8,11 +8,8 @@ class Player(arcade.Sprite):
     def __init__(self):
         super().__init__()
 
-        self.texture = arcade.Texture.create_filled(
-            "player",
-            (settings.PLAYER_SIZE, settings.PLAYER_SIZE),
-            settings.RED
-        )
+        image = arcade.make_circle_texture(settings.PLAYER_SIZE, settings.RED)
+        self.texture = image
 
         self.facing_direction = 1  # -1 for left 
         self.is_on_ground = False
@@ -42,7 +39,7 @@ class Player(arcade.Sprite):
         self.change_x = 0
         self.change_y = 0
 
-    def update(self):
+    def update(self, delta_time=1/60):
         #Update state animations & timers
         self.update_timers()
         self.was_on_ground = self.is_on_ground
@@ -177,8 +174,8 @@ class Player(arcade.Sprite):
 
 class PlayerInputHandler:
     
-    def __int__(self, player):
-        self.player = player
+    def __init__(self, theplayer):
+        self.player = theplayer
         self.keys_pressed = set()
 
     def on_key_press(self, key, modifiers):
@@ -199,3 +196,14 @@ class PlayerInputHandler:
         if key in (arcade.key.LEFT, arcade.key.RIGHT):
             if arcade.key.LEFT not in self.keys_pressed and arcade.key.RIGHT not in self.keys_pressed:
                 self.player.stop_moving()
+
+    def update(self):
+        if arcade.key.LEFT in self.keys_pressed and arcade.key.RIGHT not in self.keys_pressed:
+            self.player.move_left()
+        elif arcade.key.LEFT not in self.keys_pressed and arcade.key.RIGHT in self.keys_pressed:
+            self.player.move_right()
+        elif arcade.key.LEFT not in self.keys_pressed and arcade.key.RIGHT not in self.keys_pressed:
+            self.player.stop_moving()
+
+        if self.player.jump_buffer_timer > 0:
+            self.player.try_jump()
