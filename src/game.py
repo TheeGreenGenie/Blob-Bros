@@ -221,4 +221,15 @@ class PlatformGame(arcade.Window):
 
         player_centered = screen_center_x, screen_center_y
         self.camera.move_to(player_centered, settings.CAMERA_SPEED)
-        
+    
+    def check_game_state(self):
+        #Checks for level or game over
+
+        if self.player_sprite.center_y < -100:
+            self.player_die()
+
+        if self.player_sprite.center_x > settings.LEVEL_END_X:
+            self.level_complete = True
+            #Maybe add something here after completion? - come back later
+
+    
