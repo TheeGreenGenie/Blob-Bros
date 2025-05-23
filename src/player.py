@@ -35,4 +35,4 @@ class Player(arcade.Sprite):
         self.friction = settings.FRICTION
         self.air_resistance = settings.AIR_RESISTANCE
 
-    
+    def setup(self, start_x, start_y)
