@@ -33,10 +33,10 @@ LEFT_KEY = "LEFT"
 RIGHT_KEY = "RIGHT"
 PAUSE_KEY = "P"
 
-ASSETS_PATH = "Mario_Case (Not Started)\MarioGame\assets"
+ASSETS_PATH = "..\MarioGame\assets"
 SPRITES_PATH = f"{ASSETS_PATH}/sprites"
 SOUNDS_PATH = f"{ASSETS_PATH}/sounds"
-LEVELS_PATH = "Mario_Case (Not Started)\MarioGame\levels"
+LEVELS_PATH = "..\MarioGame\levels"
 
 PLAYER_SPRITES = {
     'small': f"{SPRITES_PATH}/player/mario_small.png",
