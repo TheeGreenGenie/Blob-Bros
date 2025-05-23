@@ -340,5 +340,5 @@ class PhysicUtils:
         sprite.change_x += norm_x * force
         sprite.change_y += norm_y * force
 
-def create_physics_engine(player_sprite, platforms):
-    return PlatformPhysicsEngine(player_sprite, platforms)
+def create_physics_engine(player_sprite, platforms, interactive_tiles=None):
+    return PlatformPhysicsEngine(player_sprite, platforms, interactive_tiles=interactive_tiles)
