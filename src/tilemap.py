@@ -59,4 +59,17 @@ class Tile(arcade.Sprite):
                 if  hasattr(other_sprite, 'power_level') and other_sprite.power_level > 0:
                     self.destroy_brick()
 
-    
+    def activate_question_block(self):
+        #Activate question block
+        self.tile_type = TileType.GROUND
+        self._create_placeholder_texture()
+
+        #Make sure to come back and spawn an item above this block
+        print(f"Question block activated at ({self.center_x, {self.center_y}})")
+
+    def destroy_brick(self):
+        #Detroy brick block
+        self.remove_from_sprite_lists()
+
+        print(f"Brick destroyed at ({self.center_x}, {self.center_y})")
+
