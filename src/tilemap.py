@@ -234,3 +234,48 @@ class TileMapLoader:
 
         tilemap.create_sprites()
         return tilemap
+    
+def save_tilemap_to_json(tilemap, filename):
+    data = {
+        'name': tilemap.name,
+        'width': tilemap.width,
+        'height': tilemap.height,
+        'tile_size': tilemap.tile_size,
+        'tiles': tilemap.tiles,
+        'player_spawn': {
+            'x': tilemap.player_spawn[0],
+            'y': tilemap.player_spawn[1]
+        },
+        'enemy_spawns': [
+            {'x': x, 'y': y} for x, y in tilemap.enemy_spawns
+        ]
+    }
+
+    if tilemap.level_end:
+        data['level_end'] = {
+            'x': tilemap.level_end[0],
+            'y': tilemap.level_end[1]
+        }
+
+    try:
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2)
+        print(f"Tilemap saved to {filename}")
+    except Exception as e:
+        print(f"Error saving tilemap to {filename}: {e}")
+
+def load_level(filename):
+    if not os.path.exists(filename):
+        print(f"Level file not found: {filename}")
+        return TileMapLoader.create_test_level()
+    
+    ext = os.path.splitext(filename)[1].lower()
+
+    if ext == 'json':
+        return TileMapLoader.load_from_json(filename)
+    elif ext == '.tmx':
+        print(f"For TMX files, use arcade.load_tilemap() in your game code")
+        return TileMapLoader.create_test_level()
+    else:
+        print(f"Unsupported file format: {ext}")
+        return TileMapLoader.create_test_level()
