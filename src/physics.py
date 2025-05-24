@@ -2,6 +2,7 @@
 
 import arcade
 import math
+import time
 import settings
 
 class PhysicsConstants:
@@ -93,6 +94,9 @@ class CollisionDetector:
         overlap_x = min(right1, right2) - max(left1, left2)
         overlap_y = min(top1, top2) - max(bottom1, bottom2)
 
+        if overlap_x <= 0 or overlap_y <= 0:
+            return None
+
         center1_x, center1_y = sprite1.center_x, sprite1.center_y
         center2_x, center2_y = sprite2.center_x, sprite2.center_y
 
@@ -100,19 +104,20 @@ class CollisionDetector:
         direction_y = 1 if center1_y > center2_y else -1
 
         return {
-            'overlap x': overlap_x,
-            'overlap y': overlap_y,
+            'overlap_x': overlap_x,
+            'overlap_y': overlap_y,
             'direction_x': direction_x,
             'direction_y': direction_y,
             'from_above': center1_y > center2_y,
             'from_below': center1_y < center2_y,
             'from_left': center1_x < center2_x,
-            'from_right': center1_y > center2_x
+            'from_right': center1_x > center2_x
         }
 
     @staticmethod
     def resolve_collision(moving_sprite, static_sprite, collision_info):
-        if not collision_info:
+        if not collision_info or 'overlap_x' not in collision_info or 'overlap_y' not in collision_info:
+            print(f"WARNING: Invalid collision_info: {collision_info}")
             return
         
         overlap_x = collision_info['overlap_x']
@@ -157,7 +162,10 @@ class PlatformPhysicsEngine:
         return self.player_on_ground
     
     def update(self):
-        #Updated phsyics updating
+        #Updated phsyics updating    
+        if not hasattr(self.player_sprite, 'center_x'):
+            print(f"ERROR: player_sprite corrupted! Type: {type(self.player_sprite)}, Value: {self.player_sprite}")
+            return
 
         self.update_collision_cooldowns()
 
@@ -167,7 +175,7 @@ class PlatformPhysicsEngine:
         self.player_sprite.change_y -= self.gravity
 
         if self.player_sprite.change_y < -PhysicsConstants.TERMINAL_VELOCITY:
-            self.player_sprite = -PhysicsConstants.TERMINAL_VELOCITY
+            self.player_sprite.change_y = -PhysicsConstants.TERMINAL_VELOCITY
 
         self.player_sprite.center_x += self.player_sprite.change_x
 
@@ -183,7 +191,7 @@ class PlatformPhysicsEngine:
             self.player_sprite.set_ground_state(self.player_on_ground)
 
     def update_collision_cooldowns(self):
-        current_time = arcade.get_time()
+        current_time = time.time()
         expired_tiles = []
 
         for tile_id, cooldown_time, in self.collision_cooldown.items():
@@ -199,7 +207,7 @@ class PlatformPhysicsEngine:
         hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.platforms)
         for platform in hit_list:
             collision_info = CollisionDetector.check_collision_detailed(self.player_sprite, platform)
-            if collision_info and collision_info['overlap_x'] < collision_info['overlap_y']:
+            if collision_info is not None and collision_info['overlap_x'] < collision_info['overlap_y']:
                 CollisionDetector.resolve_collision(self.player_sprite, platform, collision_info)
 
                 self.player_on_wall =True
@@ -209,13 +217,15 @@ class PlatformPhysicsEngine:
                     side = 'left' if collision_info['from_left'] else 'right'
                     platform.on_collision(self.player_sprite, side)
 
+
     def check_vertical_collisions(self):
+
         self.player_on_ground = False
 
         hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.platforms)
         for platform in hit_list:
             collision_info = CollisionDetector.check_collision_detailed(self.player_sprite, platform)
-            if collision_info:
+            if collision_info is not None:
                 CollisionDetector.resolve_collision(self.player_sprite, platform, collision_info)
 
                 if collision_info['from_above'] and self.player_sprite.change_y <= 0:
@@ -254,7 +264,7 @@ class PlatformPhysicsEngine:
                 if hasattr(tile, 'on_collision'):
                     tile.on_collision(self.player_sprite, side)
 
-                self.collision_cooldown[tile_id] = arcade.get_time() + 0.5
+                self.collision_cooldown[tile_id] = time.time() + 0.5
         
         self.last_collision_tiles = current_collision_tiles
 

@@ -68,7 +68,6 @@ class PlatformGame(arcade.Window):
             interactive_tiles=self.coin_list
         )
 
-        print("Game setup complete!")
 
     def create_test_level(self):
         #Simple test level with platforms & coins, will be replaced
@@ -161,6 +160,24 @@ class PlatformGame(arcade.Window):
             14
         )
 
+        if hasattr(self.physics_engine, 'player_on_ground'):
+            ground_text = f"On Ground: {self.physics_engine.player_on_ground}"
+            arcade.draw_text(
+                ground_text,
+                10, 30,
+                settings.WHITE,
+                14
+            )
+
+        if hasattr(self.physics_engine, 'player_on_wall'):
+            wall_text = f"On Wall: {self.physics_engine.player_on_wall}"
+            arcade.draw_text(
+                wall_text,
+                10, 10,
+                settings.WHITE,
+                14
+            )
+
         if settings.SHOW_HITBOXES:
             #Would draw collision rectanges - input later
             pass
@@ -182,13 +199,13 @@ class PlatformGame(arcade.Window):
         self.coin_list.update()
         self.enemy_list.update()
 
-        self.check_collisions()
+        self.check_collectibles()
 
         self.update_camera()
 
         self.check_game_state()
 
-    def check_collisions(self):
+    def check_collectibles(self):
         coin_hit_list  = arcade.check_for_collision_with_list(
             self.player_sprite,
             self.coin_list
@@ -201,6 +218,10 @@ class PlatformGame(arcade.Window):
             #Play sound when we load it
             # sound_manage.play_sound("coin")
 
+            print(f"Coin collected! Score: {self.score}")
+
+            if hasattr(self.physics_engine, 'remove_interactive_tile'):
+                self.physics_engine.remove_interactive_tile(coin)
         #Check for player-enemy collision (after adding enemies)
         # enemy_hit_list = arcade.check_for_collision_with_list(
         #     self.player_sprite,
@@ -296,6 +317,7 @@ def main():
     #runs the game
     game = PlatformGame()
     game.setup()
+
     arcade.run()
 
 if __name__ == "__main__":

@@ -198,6 +198,7 @@ class PlayerInputHandler:
                 self.player.stop_moving()
 
     def update(self):
+
         if arcade.key.LEFT in self.keys_pressed and arcade.key.RIGHT not in self.keys_pressed:
             self.player.move_left()
         elif arcade.key.LEFT not in self.keys_pressed and arcade.key.RIGHT in self.keys_pressed:
