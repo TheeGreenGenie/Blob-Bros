@@ -4,6 +4,7 @@ import arcade
 import settings
 from user import Player, PlayerInputHandler
 from physics import PlatformPhysicsEngine
+from entities.coin import CoinManager
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -22,8 +23,8 @@ class PlatformGame(arcade.Window):
 
         self.player_list = None
         self.wall_list = None
-        self.coin_list = None
         self.enemy_list  = None
+        self.coin_manager = None
 
         self.player_sprite = None
         self.player_input = None
@@ -47,7 +48,7 @@ class PlatformGame(arcade.Window):
 
         self.player_list = arcade.SpriteList()
         self.wall_list = arcade.SpriteList(use_spatial_hash=True)
-        self.coin_list = arcade.SpriteList(use_spatial_hash=True)
+        self.coin_manager = CoinManager()
         self.enemy_list = arcade.SpriteList()
 
         self.camera = arcade.camera.Camera2D()
@@ -65,7 +66,7 @@ class PlatformGame(arcade.Window):
             self.player_sprite,
             self.wall_list,
             gravity=settings.GRAVITY,
-            interactive_tiles=self.coin_list
+            interactive_tiles=self.coin_manager.coin_list
         )
 
 
@@ -97,21 +98,15 @@ class PlatformGame(arcade.Window):
                 )
         
         coin_positions = [
-            (200, 100),
-            (400, 250),
-            (600, 300),
-            (350, 250),
+            (200, 100, 'normal'),
+            (400, 250, 'silver'),
+            (600, 300, 'gold'),
+            (350, 250, 'normal'),
+            (500, 150, 'special')
         ]
 
-        for x, y in coin_positions:
-            coin = arcade.SpriteSolidColor(
-                settings.COIN_SIZE,
-                settings.COIN_SIZE,
-                settings.YELLOW
-            )
-            coin.center_x = x
-            coin.center_y = y
-            self.coin_list.append(coin)
+        for x, y, coin_type in coin_positions:
+            self.coin_manager.add_coin(x, y, coin_type)
 
     def on_draw(self):
         #Render screen
@@ -121,7 +116,7 @@ class PlatformGame(arcade.Window):
         self.camera.use()
 
         self.wall_list.draw()
-        self.coin_list.draw()
+        self.coin_manager.draw()
         self.player_list.draw()
         self.enemy_list.draw()
 
@@ -139,6 +134,21 @@ class PlatformGame(arcade.Window):
             f"Score: {self.score}",
             10, settings.SCREEN_HEIGHT - 30,
             settings.LIVES_COLOR,
+            18
+        )
+
+        arcade.draw_text(
+            f"Lives: {self.lives}",
+            10, settings.SCREEN_HEIGHT - 60,
+            settings.LIVES_COLOR,
+            18
+        )
+
+        coin_stats = self.coin_manager.get_stats()
+        arcade.draw_text(
+            f"Coins: {coin_stats['collected_coins']}/{coin_stats['total_coins']}",
+            10, settings.SCREEN_HEIGHT - 90,
+            settings.WHITE,
             18
         )
 
@@ -196,40 +206,28 @@ class PlatformGame(arcade.Window):
         self.player_sprite.set_ground_state(self.physics_engine.can_jump())
 
         self.player_list.update()
-        self.coin_list.update()
         self.enemy_list.update()
 
-        self.check_collectibles()
+        collection_info = self.coin_manager.update(delta_time, self.player_sprite)
+        if collection_info:
+            self.score += collection_info['value']
+            print(f"Collected {collection_info['coin_type']} coin! +{collection_info['value']} points. Score: {self.score}")
+
+        self.check_coin_collections()
+
 
         self.update_camera()
 
         self.check_game_state()
 
-    def check_collectibles(self):
-        coin_hit_list  = arcade.check_for_collision_with_list(
-            self.player_sprite,
-            self.coin_list
-        )
-
-        for coin in coin_hit_list:
-            coin.remove_from_sprite_lists()
-            self.score += settings.COIN_VALUE
+    def check_coin_collections(self):
+        collections = self.coin_manager.check_player_collection(self.player_sprite)
+        for collection_info in collections:
+            self.score += collection_info['value']
+            print(f"Collected {collection_info['coin_type']} coin! +{collection_info['value']} points. Score: {self.score}")
 
             #Play sound when we load it
-            # sound_manage.play_sound("coin")
-
-            print(f"Coin collected! Score: {self.score}")
-
-            if hasattr(self.physics_engine, 'remove_interactive_tile'):
-                self.physics_engine.remove_interactive_tile(coin)
-        #Check for player-enemy collision (after adding enemies)
-        # enemy_hit_list = arcade.check_for_collision_with_list(
-        #     self.player_sprite,
-        #     self.enemy_list
-        # )
-
-        # if enemy_hit_list and not settings.INVINCIBLE_MODE:
-        #     self.plaer_die()
+            # self.sound_manage.play_sound("collection_info['sound']")
 
     def update_camera(self):
         #update camera to follow player
