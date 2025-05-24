@@ -71,3 +71,207 @@ class BaseEnemy(arcade.Sprite):
         self.pushes_other_enemeies = True
 
         self._create_enemy_texture()
+
+    def _create_enemy_texture(self):
+        colors = {
+            'goomba': (139, 69, 19),
+            'koopa': (34, 139, 34),
+            'generic': (255, 0, 0),
+            'flying': (128, 0, 128),
+            'boss': (255, 165, 0)
+        }
+
+        color = colors.get(self.enemy_type, colors['generic'])
+
+        size = 32
+        temp_sprite = arcade.SpriteSolidColor(size, size, color)
+        self.texture = temp_sprite.texture
+
+    def setup_position(self, x, y):
+        self.center_x = x
+        self.center_y = y
+        self.patrol_start_x = x
+
+    def update(self, delta_time=1/60):
+        self.state_timer += delta_time
+        self.animation_timer += delta_time
+
+        if self.invulnerable:
+            self.invulnerable_timer -= delta_time
+            if self.invulnerable_timer <= 0:
+                self.invulnerable = False
+        
+        if self.state == EnemyState.WALKING:
+            self._update_walking(delta_time)
+        elif self.state == EnemyState.CHASING:
+            self._update_chasing(delta_time)
+        elif self.state == EnemyState.STUNNED:
+            self._update_stunned(delta_time)
+        elif self.state == EnemyState.DYING:
+            self._update_dying(delta_time)
+        elif self.state == EnemyState.DEAD:
+            return 
+
+        self._update_animations(delta_time)
+
+    def _update_walking(self, delta_time):
+        self.change_x = self.direction * self.speed
+
+        distance_from_start = abs(self.center_x - self.patrol_start_x)
+        if distance_from_start > self.patrol_distance:
+            self.direction *= -1
+
+    def _update_chsaing(self, delta_time):
+        if self.player_last_seen:
+            target_x, target_y = self.player_last_seen
+
+            if abs(self.center_x - target_x) > 10:
+                if self.center_x < target_x:
+                    self.direction = 1
+                    self.change_x = self.max_speed
+                else:
+                    self.direction = -1
+                    self.change_x = -self.max_speed
+            else:
+                self.set_state(EnemyState.WALKING)
+
+        if self.state_timer > self.chase_timeout:
+            self.set_state(EnemyState.WALKING)
+
+    def _update_dying(self, delta_time):
+        self.death_timer += delta_time
+
+        if self.death_timer < self.death_duration:
+            scale_factor = 1.0 - (self.death_timer / self.death_duration)
+            self.scale = max(0.1, scale_factor)
+        else:
+            self.set_state(EnemyState.DEAD)
+            self.remove_from_sprite_lists()
+    
+    def _update_animations(self, delta_time):
+        if abs(self.change_x) > 0.1:
+            self.current_animation = 'walk'
+        else:
+            self.current_animation = 'idle'
+
+        #Come back and integrate the sprite sheet into this
+
+    def set_state(self, new_state):
+        if new_state != self.state:
+            self.previous_state = self.state
+            self.state = new_state
+            self.state_timer = 0
+
+            if new_state == EnemyState.DYING:
+                self.death_timer = 0
+                self.change_x = 0
+                self.change_y = -5
+
+    def handle_wall_collision(self, wall_side):
+        if self.bounces_off_walls and wall_side in ['left', 'right']:
+            self.direction *= -1
+            self.change_x = self.direction * self.speed
+
+    def handle_edge_detection(self, on_edge):
+        if self.bounces_off_edges and on_edge and not self.can_fall_off_platforms:
+            self.direction *= -1
+
+    def detect_player(self, player_sprite):
+        if not player_sprite:
+            return False
+        
+        distance = math.sqrt(
+            (player_sprite.center_x - self.center_x)**2 +
+            (player_sprite.center_y - self.center_y)**2
+        )
+
+        if distance <= self.vision_range:
+            self.player_last_seen = (player_sprite.center_x, player_sprite.center_y)
+            return True
+        
+        return False
+    
+    def can_attack_player(self, player_sprite):
+        if not player_sprite:
+            return False
+        
+        distance = math.sqrt(
+            (player_sprite.center_x - self.center_x)**2 +
+            (player_sprite.center_y - self.center_y)**2
+        )
+
+        return distance <= self.attack_range
+    
+    def take_damage(self, damage=1, damage_type='normal'):
+        if self.invulnerable or self.state in [EnemyState.DYING, EnemyState.DEAD]:
+            return False
+        
+        if damage_type == 'stomp':
+            if not self.can_be_stomped:
+                return False
+            if self.stomp_kills:
+                self.health = 0
+            else:
+                self.health -= damage
+                self.set_state(EnemyState.STUNNED)
+
+        else:
+            self.health -= damage
+
+        if self.health <= 0:
+            self.die()
+            return True
+        else:
+            self.make_invulnerable(0.5)
+            return False
+        
+    def die(self):
+        self.set_state(EnemyState.DYING)
+
+        self.change_x = 0
+
+        #Play death sound wehn added
+        #sound_manager.play_sound("enemy_death")
+
+    def make_invulnerable(self, duration):
+        self.invulnerable = True
+        self.invulnerable_timer = duration
+
+    def get_damage_to_player(self):
+        return self.damage_to_player
+    
+    def get_score_value(self):
+        return self.score_value
+    
+    def interact_with_player(self, player_sprite, collision_side):
+        if self.state in [EnemyState.DYING, EnemyState.DEAD]:
+            return None
+        
+        if collision_side == 'top':
+            if self.can_be_stomped:
+                died = self.take_damage(1, 'stomp')
+                return {
+                    'type': 'stomp',
+                    'enemy_died': died,
+                    'score': self.score_value if died else 0,
+                    'bounce_player': True
+                }
+            
+        else:
+            return {
+                'type': 'damage',
+                'damage_to_player': self.damage_to_player,
+                'enemy_died': False,
+                'knockback': True
+            }
+        
+    def get_debug_info(self):
+        return {
+            'type': self.enemy_type,
+            'state': self.state,
+            'position': (int(self.center_x), int(self.center_y)),
+            'health': self.health,
+            'on_ground': self.on_ground,
+            'vision_range': self.vision_range
+        }
+    
