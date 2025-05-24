@@ -207,7 +207,25 @@ class CoinManager:
 
         return collections
     
+    def get_stats(self):
+        return {
+            'total_coins': self.total_coins,
+            'collected_coins': self.collected_coins,
+            'remaining_coins': self.total_coins - self.collected_coins,
+            'total_value': self.total_value,
+            'collection_percentage': (self.collected_coins / max(1, self.total_coins)) * 100
+        }
     
+    def reset(self):
+        self.coin_list.clear()
+        self.total_coins = 0
+        self.collected_coins = 0
+        self.total_value = 0
+
+    def draw(self):
+        self.coin_list.draw()
+
+
     
 
     
