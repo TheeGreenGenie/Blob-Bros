@@ -172,5 +172,42 @@ class CoinManager:
 
         return coin
     
+    def update(self, delta_time, player_sprite=None):
+        self.coin_list.update(delta_time)
+
+        if player_sprite and self.magnetic_collection:
+            for coin in self.coin_list:
+                if not coin.is_collected:
+                    distance = math.sqrt(
+                        (player_sprite.center_x - coin.center_x)**2 +
+                        (player_sprite.center_y - coin.center_y)**2
+                    )
+
+                    if distance <= self.auto_collect_distance:
+                        value = coin.collect(player_sprite)
+                        if value > 0:
+                            self.collected_coins += 1
+                            return coin.get_collection_info()
+                    
+                    elif coin.check_magnetic_attraction(player_sprite):
+                        coin.apply_magnetic_force(player_sprite, delta_time)
+
+        return None
     
+    def check_player_collection(self, player_sprite):
+        collections = []
+        hit_list = arcade.check_for_collision_with_list(player_sprite, self.coin_list)
+
+        for coin in hit_list:
+            if not coin.is_collected:
+                value = coin.collect(player_sprite)
+                if value > 0:
+                    self.collected_coins += 1
+                    collections.append(coin.get_collection_info())
+
+        return collections
+    
+    
+    
+
     
