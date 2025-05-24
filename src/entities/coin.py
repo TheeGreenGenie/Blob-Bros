@@ -152,4 +152,15 @@ class Coin(arcade.Sprite):
             'effect': 'sparkle'
         }
 
+class CoinManager:
+
+    def __init__(self):
+        self.coin_list = arcade.SpriteList(use_spatial_hash=True)
+        self.total_coins = 0
+        self.collected_coins = 0
+        self.total_value = 0
+
+        self.magnetic_collection = True
+        self.auto_collect_distance = 30
+
     
