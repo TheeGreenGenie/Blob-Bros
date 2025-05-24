@@ -1,3 +1,4 @@
+#Coin class
 import arcade
 import math
 import time
