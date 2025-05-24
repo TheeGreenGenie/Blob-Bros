@@ -163,4 +163,14 @@ class CoinManager:
         self.magnetic_collection = True
         self.auto_collect_distance = 30
 
+    def add_coin(self, x, y, coin_type='normal', value=None):
+        coin = Coin(coin_type, value)
+        coin.setup_position(x, y)
+        self.coin_list.append(coin)
+        self.total_coins += 1
+        self.total_value += coin.value
+
+        return coin
+    
+    
     
