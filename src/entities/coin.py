@@ -225,7 +225,39 @@ class CoinManager:
     def draw(self):
         self.coin_list.draw()
 
+def create_coin_line(start_x, start_y, end_x, end_y, spacing=64, coin_type='normal'):
+    coins = []
 
-    
+    dx = end_x - start_x
+    dy = end_y - start_y
+    distance = math.sqrt(dx*dx + dy*dy)
 
+    if distance == 0:
+        return coins
     
+    num_coins = int(distance / spacing) + 1
+
+    for i in range(num_coins):
+        progress = i / max(1, num_coins -1)
+        x = start_x + dx * progress
+        y = start_y + dy * progress
+
+        coin = Coin(coin_type)
+        coin.setup_position(x, y)
+        coins.append(coin)
+
+    return coins
+
+def create_coin_circle(center_x, center_y, radius, num_coins=8, coin_type='normal'):
+    coins = []
+
+    for i in range(num_coins):
+        angle = (i / num_coins) * 2 * math.pi
+        x = center_x + math.cos(angle) * radius
+        y = center_y + math.sin(angle) * radius
+
+        coin = Coin(coin_type)
+        coin.setup_position(x, y)
+        coins.append(coin)
+
+    return coins
