@@ -224,3 +224,4 @@ class Goomba(BaseEnemy):
         }
 
         return {**base_info, **goomba_info}
+    
