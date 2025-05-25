@@ -327,4 +327,3 @@ def create_goomba_patrol(start_x, start_y, end_x, num_goombas=3, variants=None):
         goombas.append(goomba)
 
     return goombas
-
