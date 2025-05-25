@@ -275,3 +275,82 @@ class BaseEnemy(arcade.Sprite):
             'vision_range': self.vision_range
         }
     
+class EnemyManager:
+
+    def __init__(self):
+        self.enemy_list = arcade.SpriteList()
+        self.total_enemies = 0
+        self.defeated_enemies = 0
+
+    def add_enemy(self, enemy_class, x, y, **kwargs):
+        enemy = enemy_class(**kwargs)
+        enemy.setup_position(x, y)
+        self.enemy_list.append(enemy)
+        self.total_enemies+=1
+
+        return enemy
+    
+    def update(self, delta_time, player_sprite=None):
+        for enemy in self.enemy_list:
+            if player_sprite and enemy.state != EnemyState.DEAD:
+                if enemy.detect_player(player_sprite):
+                    if enemy.state == EnemyState.WALKING:
+                        enemy.set_state(EnemyState.CHASING)
+
+            enemy.update(delta_time)
+
+    def check_player_interactions(self, player_sprite, physics_engine=None):
+        interactions = []
+        hit_list = arcade.check_for_collision_with_list(player_sprite)
+
+        for enemy in hit_list:
+            if enemy.state in [EnemyState.DYING, EnemyState.DEAD]:
+                continue
+
+            if player_sprite.bottom > enemy.top - 10:
+                collision_side = 'top'
+            else:
+                collision_side = 'side'
+
+            interaction = enemy.interact_with_player(player_sprite, collision_side)
+            if interaction:
+                interactions.append(interaction)
+
+                if interaction['enemy_died']:
+                    self.defeated_enemies += 1
+
+        return interactions
+    
+    def get_stats(self):
+        return {
+            'total_enemies': self.total_enemies,
+            'defeated_enemies': self.defeated_enemies,
+            'remaining_enemies': self.total_enemies - self.defeated_enemies,
+            'defeat_percentage': (self.defeated_enemies / max(1, self.total_enemies)) * 100
+        }
+    
+    def reset(self):
+        self.enemy_list.clear()
+        self.total_enemies = 0
+        self.defeated_enemies = 0
+
+    def draw(self):
+        self.enemy_list.draw()
+
+    def draw_debug(self):
+        for enemy in self.enemy_list:
+            if settings.SHOW_HITBOXES:
+                arcade.draw_rect_outline(
+                    enemy.center_x, enemy.center_y,
+                    enemy.width, enemy.height,
+                    arcade.color.RED, 2
+                )
+
+            if settings.DEBUG_MODE:
+                arcade.draw_circle_outline(
+                    enemy.center_x, enemy.center_y,
+                    enemy.vision_range,
+                    arcade.color.YELLOW, 1
+                )
+
+            
