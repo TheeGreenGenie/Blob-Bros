@@ -308,3 +308,23 @@ class GoombaSpawner:
 
         return goombas
     
+def create_goomba(x, y, variant='normal'):
+    goomba = Goomba(variant=variant)
+    goomba.setup_position(x, y)
+    return goomba
+
+def create_goomba_patrol(start_x, start_y, end_x, num_goombas=3, variants=None):
+    if variants is None:
+        variants = ['normal'] * num_goombas
+
+    goombas = []
+    spacing = (end_x - start_x) / max(1, num_goombas - 1)
+
+    for i in range(num_goombas):
+        x = start_x + (i * spacing)
+        variant = variants[i % len(variants)]
+        goomba = create_goomba(x, start_y, variant)
+        goombas.append(goomba)
+
+    return goombas
+
