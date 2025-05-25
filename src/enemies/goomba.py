@@ -225,3 +225,86 @@ class Goomba(BaseEnemy):
 
         return {**base_info, **goomba_info}
     
+class GoombaSpawner:
+
+    @staticmethod
+    def spawn_normal_goomba(x, y):
+        return Goomba(variant='normal').setup_position(x, y)
+    
+    @staticmethod
+    def spawn_fast_goomba(x, y):
+        return Goomba(variant='fast').setup_position(x, y)
+    
+    @staticmethod
+    def spawn_large_goomba(x, y):
+        return Goomba(variant='large').setup_position(x, y)
+
+    @staticmethod
+    def spawn_elite_goomba(x, y):
+        return Goomba(variant='elite').setup_position(x, y)
+    
+    @staticmethod
+    def spawn_goomba_group(positions, variant_weights=None):
+        if variant_weights is None:
+            variant_weights = {
+                'normal': 0.6,
+                'fast': 0.2,
+                'large': 0.15,
+                'elite': 0.05
+            }
+        
+        goombas = []
+        variants = list(variant_weights.keys())
+        weights = list(variant_weights.values())
+
+        for x, y in positions:
+            variant = random.choices(variants, weights=weights)[0]
+            goomba = Goomba(variant=variant)
+            goomba.setup_position(x, y)
+            goombas.append(goomba)
+
+        return goombas
+    
+    @staticmethod
+    def create_goomba_formation(center_x, center_y, formation='line'):
+        goombas = []
+
+        if formation == 'line':
+            positions = [
+                (center_x - 64, center_y),
+                (center_x, center_y),
+                (center_x + 64, center_y)
+            ]
+            for i, (x,y) in enumerate(positions):
+                variant = 'normal' if i != 1 else 'fast'  # Middle one is fast
+                goomba = Goomba(variant=variant)
+                goomba.setup_position(x, y)
+                goombas.append(goomba)
+
+        elif formation == 'triangle':
+            positions = [
+                (center_x, center_y + 32),
+                (center_x - 48, center_y),
+                (center_x + 48, center_y)
+            ]
+            variants = ['elite', 'normal', 'normal']
+            for (x, y), variant in zip(positions, variants):
+                goomba = Goomba(variant=variant)
+                goomba.setup_position(x, y)
+                goombas.append(goomba)
+
+        elif formation == 'square':
+            positions - [
+                (center_x - 32, center_y + 32),
+                (center_x + 32, center_y + 32),
+                (center_x - 32, center_y - 32),
+                (center_x + 32, center_y - 32)
+            ]
+            variants = ['normal', 'fast', 'normal', 'large']
+            for (x, y), variant in zip(positions, variants):
+                goomba = Goomba(variant=variant)
+                goomba.setup_position(x, y)
+                goombas.append(goomba)
+
+        return goombas
+    
