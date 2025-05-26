@@ -272,4 +272,77 @@ class HUD:
             'total_enemies': 0
         }
     
-    
+class HUDManager:
+
+    def __init__(self, screen_width, screen_height):
+        self.main_hud = HUD(screen_width, screen_height)
+        self.pause_overlay = None
+        self.game_over_overlay = None
+
+        self.current_state = 'playing'
+
+    def update(self, delta_time, game_data, game_state='playing'):
+        self.current_state = game_state
+
+        if game_state == 'playing':
+            self.main_hud.update(delta_time, game_data)
+
+    def draw(self):
+        if self.current_state == 'playing':
+            self.main_hud.draw()
+        elif self.current_state == 'paused':
+            self.main_hud.draw()
+            self._draw_pause_overlay()
+        elif self.current_state == 'game_over':
+            self.main_hud.draw()
+            self._draw_game_over_overlay()
+
+    def _draw_pause_overlay(self):
+        arcade.draw_rect_filled(
+            self.main_hud.screen_width // 2,
+            self.main_hud.screen_height // 2,
+            self.main_hud.screen_width,
+            self.main_hud.screen_height,
+            (0, 0, 0, 128)
+        )
+
+        arcade.draw_text(
+            "PAUSED",
+            self.main_hud.screen_width // 2,
+            self.main_hud.screen_height // 2,
+            settings.WHITE, 48,
+            anchor_x='center', anchor_y='center'
+        )
+
+        arcade.draw_text(
+            "Press P to Resume",
+            self.main_hud.screen_width // 2,
+            self.main_hud.screen_height // 2 - 60,
+            settings.WHITE, 24,
+            anchor_x='center', anchor_y='center'
+        )
+
+    def _draw_game_over_overlay(self):
+        arcade.draw_rect_filled(
+            self.main_hud.screen_width // 2,
+            self.main_hud.screen_height // 2,
+            self.main_hud.screen_width,
+            self.main_hud.screen_height,
+            (128, 0, 0, 128)
+        )
+
+        arcade.draw_text(
+            'GAME OVER',
+            self.main_hud.screen_width // 2,
+            self.main_hud.screen_height // 2,
+            (255, 100, 100), 48,
+            anchor_x='center', anchor_y='center'
+        )
+
+        arcade.draw_text(
+            "Press R to Restart",
+            self.main_hud.screen_width // 2,
+            self.main_hud.screen_height // 2 - 100,
+            settings.WHITE, 18,
+            anchor_x='center', anchor_y='cemter'
+        )
