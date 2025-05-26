@@ -193,8 +193,9 @@ class MainMenu(BaseMenu):
                 int(25 + intensity * 50),
                 int(112 + intensity * 50)
             )
-            arcade.draw_rect_filled(
-                self.screen_width // 2, y + 2,
+
+            arcade.draw_lbwh_rectangle_filled(
+                0, y,
                 self.screen_width, 4,
                 color
             )
@@ -241,8 +242,8 @@ class PauseMenu(BaseMenu):
         self.title_size = 36
 
     def draw(self):
-        arcade.draw_rect_filled(
-            self.screen_width // 2, self.screen_height // 2,
+        arcade.draw_lbwh_rectangle_filled(
+            0, 0,
             self.screen_width, self.screen_height,
             (0, 0, 0, 180)
         )

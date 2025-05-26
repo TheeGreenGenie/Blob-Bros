@@ -191,15 +191,16 @@ class HUD:
         )
 
     def _draw_progress_bar(self, x, y, width, height, percentage, color):
-        arcade.draw_rect_filled(x + width//2, y + height//2, width, height, (64, 64, 64))
+        arcade.draw_lbwh_rectangle_filled(x, y, width, height, (64, 64, 64))
 
         arcade.draw_rect_outline(x + width//2, y + height//2, width, height, self.text_color, 1)
 
         if percentage > 0:
             fill_width = (percentage / 100) * width
-            arcade.draw_rect_filled(
-                x + fill_width//2, y + height//2,
-                fill_width, height - 2, color
+            arcade.draw_lbwh_rectangle_filled(
+                x, y + 1,
+                fill_width, height - 2,
+                color
             )
 
     def _draw_performance_info(self):
@@ -298,9 +299,8 @@ class HUDManager:
             self._draw_game_over_overlay()
 
     def _draw_pause_overlay(self):
-        arcade.draw_rect_filled(
-            self.main_hud.screen_width // 2,
-            self.main_hud.screen_height // 2,
+        arcade.draw_lbwh_rectangle_filled(
+            0, 0,
             self.main_hud.screen_width,
             self.main_hud.screen_height,
             (0, 0, 0, 128)
@@ -323,9 +323,8 @@ class HUDManager:
         )
 
     def _draw_game_over_overlay(self):
-        arcade.draw_rect_filled(
-            self.main_hud.screen_width // 2,
-            self.main_hud.screen_height // 2,
+        arcade.draw_lbwh_rectangle_filled(
+            0, 0,
             self.main_hud.screen_width,
             self.main_hud.screen_height,
             (128, 0, 0, 128)
