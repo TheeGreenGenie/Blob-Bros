@@ -227,3 +227,68 @@ class MainMenu(BaseMenu):
             anchor_x='center', anchor_y='center'
         )
 
+class PauseMenu(BaseMenu):
+
+    def __init__(self, screen_width, screen_height):
+        super().__init__(screen_width, screen_height, "PAUSED")
+
+        self.add_item("RESUME", 'resume')
+        self.add_item("RESTART LEVEL", 'restart_level')
+        self.add_item("SETTINGS", 'settings')
+        self.add_item("MAIN MENU", 'main_menu')
+
+        self.background_color = (0, 0, 0, 180)
+        self.title_size = 36
+
+    def draw(self):
+        arcade.draw_rect_filled(
+            self.screen_width // 2, self.screen_height // 2,
+            self.screen_width, self.screen_height,
+            (0, 0, 0, 180)
+        )
+
+        super().draw()
+
+class GameOverMenu(BaseMenu):
+
+    def __init__(self, screen_width, screen_height):
+        super().__init__(screen_width, screen_height, "GAME OVER")
+
+        self.final_score  = 0
+        self.level_reached = '1-1'
+        self.coins_collected = 0
+        self.enemies_defeated = 0
+
+        self.add_item('PLAY AGAIN', 'play_again')
+        self.add_item('MAIN MENU', 'main_menu')
+        self.add_item('QUIT', 'quit')
+
+        self.background_color = (100, 0, 0)
+        self.title_color = (255, 100, 100)
+
+    def set_game_stats(self, score, level, coins, enemies):
+        self.final_score = score
+        self.level_reached = level
+        self.coins_collected = coins
+        self.enemies_defeated = enemies
+
+    def draw(self):
+        super().draw()
+
+        stats_y = self.screen_height // 2 - 50
+
+        stats = [
+            f"Final Score: {self.final_score:06d}",
+            f"Level Reached: {self.level_reached}",
+            f"Coins Collected: {self.coins_collected}",
+            f"Enemies Defeated: {self.enemies_defeated}"
+        ]
+
+        for i, stat in enumerate(stats):
+            arcade.draw_text(
+                stat,
+                self.screen_width // 2, stats_y - (i * 30),
+                settings.WHITE, 18,
+                anchor_x='center', anchor_y='center'
+            )
+
