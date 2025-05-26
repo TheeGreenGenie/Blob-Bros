@@ -109,8 +109,8 @@ class BaseMenu:
         return None
     
     def draw(self):
-        arcade.draw_rect_filled(
-            self.screen_width // 2, self.screen_height // 2,
+        arcade.draw_lbwh_rectangle_filled(
+            0, 0,
             self.screen_width, self.screen_height,
             self.background_color
         )
@@ -292,3 +292,126 @@ class GameOverMenu(BaseMenu):
                 anchor_x='center', anchor_y='center'
             )
 
+class SettingsMenu(BaseMenu):
+
+    def __init__(self, screen_width, screen_height):
+        super().__init__(screen_width, screen_height, "SETTINGS")
+
+        self.music_enabled = True
+        self.sound_enabled = True
+        self.debug_mode = settings.DEBUG_MODE
+        self.show_fps = settings.SHOW_FPS
+
+        self.rebuuild_items()
+
+    def rebuild_items(self):
+        self.clear_items()
+
+        music_text = f"Music: {'ON' if self.music_enabled else 'OFF'}"
+        self.add_item(music_text, 'toggle_music')
+
+        sound_text = f"Sound EFffects: {'ON' if self.sound_enabled else 'OFF'}"
+        self.add_item(sound_text, 'toggle_sound')
+
+        debug_text = f"Debug Mode: {'ON' if self.sound_enabled else 'OFF'}"
+        self.add_item(debug_text, 'toggle_debug')
+
+        fps_text = f"Show FPS: {'ON' if self.show_fps else 'OFF'}"
+        self.add_item(fps_text, 'toggle_fps')
+
+        self.add_item("BACK", 'back')
+
+    def handle_setting_action(self, action):
+        if action == 'toggle_music':
+            self.music_enabled = not self.music_enabled
+        elif action == 'toggle_sound':
+            self.sound_enabled = not self.sound_enabled
+        elif action == 'toggle_debug':
+            self.debug_mode = not self.debug_mode
+            settings.DEBUG_MODE = self.debug_mode
+        elif action == 'toggle_fps':
+            self.show_fps = not self.show_fps
+            settings.SHOW_FPS = self.show_fps
+        self.rebuild_items()
+
+class MenuManager:
+
+    def __init__(self, screen_width, screen_height):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+
+        self.main_menu = MainMenu(screen_width, screen_height)
+        self.pause_menu = PauseMenu(screen_width, screen_height)
+        self.game_over_menu = GameOverMenu(screen_width, screen_height)
+        self.settings_menu = SettingsMenu(screen_width, screen_height)
+
+        self.menu_stack = []
+        self.current_menu = self.main_menu
+
+        self.transitioning = False
+        self.transition_timer = 0
+        self.transition_duration = 0.3
+
+    def show_menu(self, menu_name, push_current=True):
+        if push_current and self.current_menu:
+            self.menu_stack.append(self.current_menu)
+
+        if menu_name == 'main':
+            self.current_menu = self.main_menu
+        elif menu_name == 'pause':
+            self.current_menu = self.pause_menu
+        elif menu_name == 'game_over':
+            self.current_menu = self.game_over_menu
+        elif menu_name == 'settings':
+            self.current_menu = self.settings_menu
+
+    def go_back(self):
+        if self.menu_stack:
+            self.current_menu = self.menu_stack.pop()
+            return True
+        return False
+    
+    def update(self, delta_time):
+        if self.current_menu:
+            self.current_menu.update(delta_time)
+
+    def handle_input(self, key):
+        if not self.current_menu:
+            return None
+        
+        if key == arcade.key.ESCAPE:
+            if isinstance(self.current_menu, PauseMenu):
+                return 'resume'
+            elif self.go_back():
+                return None
+            else:
+                return 'quit'
+            
+        action = self.current_menu.handle_input(key)
+
+        if isinstance(self.current_menu, SettingsMenu) and action:
+            if action == 'back':
+                self.go_back()
+                return None
+            else:
+                self.current_menu.handle_setting_action(action)
+                return None
+            
+        return action
+    
+    def draw(self):
+        if self.current_menu:
+            self.current_menu.draw()
+
+    def set_game_over_stats(self, score, level, coins, enemies):
+        self.game_over_menu.set_game_stats(score, level, coins, enemies)
+
+    def update_screen_size(self, width, height):
+        self.screen_width = width
+        self.screen_height = height
+
+        for menu in [self.main_menu, self.pause_menu, self.game_over_menu, self.settings_menu]:
+            menu.screen_width = width
+            menu.screen_height = height
+            if hasattr(menu, 'generate_background_stars'):
+                menu.generate_background_stars()
