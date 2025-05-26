@@ -1,6 +1,7 @@
 #Menu classes (pages)
 import arcade
 import math
+import random
 import sys
 import os
 
@@ -158,4 +159,71 @@ class BaseMenu:
                 self.selected_color, self.item_size,
                 anchor_x='center', anchor_y='center'
             )
+
+class MainMenu(BaseMenu):
+
+    def __init__(self, screen_width, screen_height):
+        super().__init__(screen_width, screen_height, 'MARIO PlATFORMER')
+
+        self.add_item("START GAME", 'start_game')
+        self.add_item("SETTINGS", 'settings')
+        self.add_item("HIGH SCORES", 'high_scores')
+        self.add_item("CREDITS", 'credits')
+        self.add_item("QUIT", 'quit')
+
+        self.background_color = (25, 25, 112)
+        self.title_color = (255, 215, 0)
+
+        self.star_positions = []
+        self.generate_background_stars()
+
+    def generate_background_stars(self, delta_time):
+        for star in self.star_positions:
+            star[1] -= star[3] * delta_time   # Move star down
+            if star[1] < 0:   # Reset if leaves screen
+                star[1] = self.screen_height
+                star[0] = __import__('random').randint(0, self.screen_width)
+
+    def draw(self):
+        #Gradient
+        for y in range(0, self.screen_height, 4):
+            intensity = y / self.screen_height
+            color = (
+                int(25 + intensity * 50),
+                int(25 + intensity * 50),
+                int(112 + intensity * 50)
+            )
+            arcade.draw_rect_filled(
+                self.screen_width // 2, y + 2,
+                self.screen_width, 4,
+                color
+            )
+
+        for star in self.star_positions:
+            arcade.draw_circle_filled(star[0], star[1], star[2], settings.WHITE)
+
+        shadow_offset = 3
+        arcade.draw_text(
+            self.title,
+            self.screen_width // 2 + shadow_offset,
+            self.screen_height - self.title_y_offset - shadow_offset,
+            (50, 50, 50), self.title_size,
+            anchor_x='center', anchor_y='center'
+        )
+
+        arcade.draw_text(
+            self.title,
+            self.screen_width // 2, self.screen_height - self.title_y_offset,
+            self.title_color, self.title_size,
+            anchor_x='center', anchor_y='center'
+        )
+
+        self.draw_items()
+
+        arcade.draw_text(
+            "Use ↑↓ to navigate, ENTER to select",
+            self.screen_width // 2, 50,
+            settings.WHITE, 16,
+            anchor_x='center', anchor_y='center'
+        )
 
