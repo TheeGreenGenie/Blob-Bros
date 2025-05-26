@@ -190,4 +190,86 @@ class HUD:
             100, 10, enemy_percentage, (255, 100, 100)
         )
 
+    def _draw_progress_bar(self, x, y, width, height, percentage, color):
+        arcade.draw_rect_filled(x + width//2, y + height//2, width, height, (64, 64, 64))
+
+        arcade.draw_rect_outline(x + width//2, y + height//2, width, height, self.text_color, 1)
+
+        if percentage > 0:
+            fill_width = (percentage / 100) * width
+            arcade.draw_rect_filled(
+                x + fill_width//2, y + height//2,
+                fill_width, height - 2, color
+            )
+
+    def _draw_performance_info(self):
+        fps = f"FPS: {arcade.get_fps():.0f}"
+        self._draw_text(
+            fps,
+            self.layout['fps_pos'][0], self.layout['fps_pos'][1],
+            self.text_color, self.font_size_small
+        )
+
+    def _draw_debug_info(self):
+        debug_lines  = [
+            f"Debug Mode: ON",
+            f"Time: {self.level_time:.1f}s",
+            f"Score Flash: {self.score_flash}",
+            f"Lives Flash: {self.lives_flash}",
+            f"Time Warning: {self.time_warning}"
+        ]
+
+        for i, line in enumerate(debug_lines):
+            self._draw_text(
+                line,
+                self.layout['debug_pos'][0],
+                self.layout['debug_pos'][1] - (i * 20),
+                (200, 200, 200), self.font_size_small
+            )
+
+    def _draw_text(self, text, x, y, color, font_size, anchor_x='left', anchor_y='bottom'):
+        arcade._draw_text(
+            text, x, y, color, font_size,
+            anchor_x=anchor_x, anchor_y=anchor_y
+        )
+
+    def show_message(self, message, duration=3.0, color=None):
+        self.temp_message = message
+        self.temp_message_timer = duration
+        self.temp_message_color = color or self.text_color
+
+    def update_screen_size(self, width, height):
+        self.screen_width = width
+        self.screen_height = height
+        self.update_layout()
+
+    def reset_for_new_level(self, level_data=None):
+        self.level_time = 0
+        self.score_anmiation_timer = 0
+        self.score_flash = False
+        self.lives_flash = False
+        self.lives_flash_timer = 0
+        self.time_warning = False
+
+        if level_data:
+            self.level_name = level_data.get('name', '1-1')
+            self.level_time_limit = level_data.get('time_limit', 400)
+            self.total_coins = level_data.get('total_coins', 0)
+            self.total_enemies = level_data.get('total_enemies', 0)
+
+        self.coins_collected = 0
+        self.enemies_defeated = 0
+
+    def get_hud_data_template(self):
+        return {
+            'score': 0,
+            'lives': 3,
+            'level_time': 0,
+            'level_name': '1-1',
+            'coins_collected': 0,
+            'total_coins': 0,
+            'enemies_defeaetd': 0,
+            'total_enemies': 0
+        }
+    
     
