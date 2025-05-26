@@ -55,10 +55,11 @@ class Coin(arcade.Sprite):
             'special': (255, 20, 147)
         }
 
-        color = colors.get(self.coin_type, colors['normal'])
-
-        temp_sprite = arcade.SpriteSolidColor(settings.COIN_SIZE, settings.COIN_SIZE, color)
-        self.texture = temp_sprite.texture
+        color = colors.get(self.coin_type, colors["normal"])
+        
+        self.coin_color = color
+        
+        self.texture = arcade.Texture.create_empty("coin", (settings.COIN_SIZE, settings.COIN_SIZE))
 
     def setup_position(self, x, y):
         self.center_x = x
@@ -157,6 +158,16 @@ class Coin(arcade.Sprite):
             'sound': self.collection_sound,
             'effect': 'sparkle'
         }
+    
+    def draw(self):
+        if hasattr(self, 'coin_color'):
+            arcade.draw_rect_filled(
+                self.center_x, self.center_y,
+                settings.COIN_SIZE, settings.COIN_SIZE,
+                self.coin_color
+            )
+        else:
+            super().draw()
 
 class CoinManager:
 

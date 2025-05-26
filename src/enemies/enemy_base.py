@@ -92,6 +92,10 @@ class BaseEnemy(arcade.Sprite):
         self.center_y = y
         self.patrol_start_x = x
 
+        self.set_state(EnemyState.WALKING)
+
+        self.change_x = self.direction * self.speed
+
     def update(self, delta_time=1/60):
         self.state_timer += delta_time
         self.animation_timer += delta_time
@@ -104,7 +108,7 @@ class BaseEnemy(arcade.Sprite):
         if self.state == EnemyState.WALKING:
             self._update_walking(delta_time)
         elif self.state == EnemyState.CHASING:
-            self._update_chasing(delta_time)
+            self._update_charging(delta_time)
         elif self.state == EnemyState.STUNNED:
             self._update_stunned(delta_time)
         elif self.state == EnemyState.DYING:
@@ -120,6 +124,12 @@ class BaseEnemy(arcade.Sprite):
         distance_from_start = abs(self.center_x - self.patrol_start_x)
         if distance_from_start > self.patrol_distance:
             self.direction *= -1
+
+    def _update_stunned(self, delta_time):
+        self.change_x = 0
+
+        if self.state_timer > 1.0:
+            self.set_state(EnemyState.WALKING)
 
     def _update_chsaing(self, delta_time):
         if self.player_last_seen:
@@ -301,13 +311,16 @@ class EnemyManager:
 
     def check_player_interactions(self, player_sprite, physics_engine=None):
         interactions = []
-        hit_list = arcade.check_for_collision_with_list(player_sprite)
+        hit_list = arcade.check_for_collision_with_list(player_sprite, self.enemy_list)
 
         for enemy in hit_list:
             if enemy.state in [EnemyState.DYING, EnemyState.DEAD]:
                 continue
 
-            if player_sprite.bottom > enemy.top - 10:
+            player_falling = player_sprite.change_y < 0
+            player_above = player_sprite.bottom > enemy.center_y
+
+            if player_falling and player_above:
                 collision_side = 'top'
             else:
                 collision_side = 'side'

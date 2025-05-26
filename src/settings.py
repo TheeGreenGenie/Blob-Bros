@@ -33,10 +33,10 @@ LEFT_KEY = "LEFT"
 RIGHT_KEY = "RIGHT"
 PAUSE_KEY = "P"
 
-ASSETS_PATH = "..\MarioGame\assets"
+ASSETS_PATH = "\assets"
 SPRITES_PATH = f"{ASSETS_PATH}/sprites"
 SOUNDS_PATH = f"{ASSETS_PATH}/sounds"
-LEVELS_PATH = "..\MarioGame\levels"
+LEVELS_PATH = "\levels"
 
 PLAYER_SPRITES = {
     'small': f"{SPRITES_PATH}/player/mario_small.png",
@@ -88,8 +88,9 @@ SCORE_COLOR = WHITE
 LIVES_COLOR = RED
 TIMER_COLOR = YELLOW
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 SHOW_HITBOXES = False
+SHOW_ENEMIES = True
 SHOW_FPS = True
 INVINCIBLE_MODE = False #For testing
 

@@ -2,7 +2,7 @@
 import arcade
 import math
 import random
-from base_enemy import BaseEnemy, EnemyState
+from .enemy_base import BaseEnemy, EnemyState
 import sys
 import os
 
@@ -70,12 +70,17 @@ class Goomba(BaseEnemy):
             'elite': (75, 0, 130)
         }
 
-        color = variant_colors.get(self.variant, variant_colors['normal'])
-
-        size = 28 if self.variant != 'large' else 36
-
-        temp_sprite = arcade.SpriteSolidColor(size, size, color)
-        self.texture = temp_sprite.texture
+        color = variant_colors.get(self.variant, variant_colors["normal"])
+        
+        # Size based on variant
+        size = 28 if self.variant != "large" else 36
+        
+        # Store color and size for custom drawing
+        self.goomba_color = color
+        self.goomba_size = size
+        
+        # Create a basic empty texture with just the size
+        self.texture = arcade.Texture.create_empty("goomba", (size, size))
 
     def update(self, delta_time=1/60):
         #call parent update function first
@@ -121,6 +126,9 @@ class Goomba(BaseEnemy):
                 self.set_state(EnemyState.WALKING)
 
     def take_damage(self, damage=1, damage_type='normal'):
+
+        print(f"Goomba {self.variant} taking {damage} {damage_type} damage. Health: {self.health}")
+
         if self.squished or self.state in [EnemyState.DYING, EnemyState.DEAD]:
             return False
         
@@ -131,18 +139,32 @@ class Goomba(BaseEnemy):
                 self.set_state(EnemyState.STUNNED)
                 self.scale = 1.0
                 self._create_goomba_texture()
+                print(f"Large goomba dmaged, health now: {self.health}")
                 return False
             
             else:
                 self.health = 0
                 self.die()
+                print(f"Goomba died")
                 return True
+        else:
+            self.health -= damage
+            if self.health <= 0:
+                self.die()
+                return True
+            else:
+                self.make_invulnerable(0.5)
+                return False
             
     def die(self):
         self.squished = True
         self.set_state(EnemyState.DYING)
 
-        self.scale = (self.scale, 0.3)
+
+        if hasattr(self, 'goomba_size'):
+            self.goomba_size = self.goomba_size // 2  #  Make the goomba smaller when it dies
+        else:
+            self.scale = 0.5
 
         self.change_x = 0
         self.change_y = 0
@@ -192,7 +214,7 @@ class Goomba(BaseEnemy):
             return {
                 'type': 'damage',
                 'enemy_type': 'goomba',
-                'dmage_to_player': self.damage_to_player,
+                'damage_to_player': self.damage_to_player,
                 'enemy_died': False,
                 'knockback': True,
                 'sound': 'player_hurt'
@@ -224,6 +246,16 @@ class Goomba(BaseEnemy):
         }
 
         return {**base_info, **goomba_info}
+    
+    def draw(self):
+        if hasattr(self, 'goomba_color') and hasattr(self, 'goomba_size'):
+            arcade.draw_rect_filled(
+                self.center_x, self.center_y,
+                self.goomba_size, self.goomba_size,
+                self.goomba_color
+            )
+        else:
+            super().draw()
     
 class GoombaSpawner:
 

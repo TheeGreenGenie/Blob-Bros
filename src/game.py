@@ -1,10 +1,16 @@
 #Main game class
-
+import sys
+import os
 import arcade
 import settings
 from user import Player, PlayerInputHandler
 from physics import PlatformPhysicsEngine
 from entities.coin import CoinManager
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
+
+from enemies.enemy_base import EnemyManager, EnemyState
+from enemies.goomba import Goomba, create_goomba
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -23,7 +29,7 @@ class PlatformGame(arcade.Window):
 
         self.player_list = None
         self.wall_list = None
-        self.enemy_list  = None
+        self.enemy_manager  = None
         self.coin_manager = None
 
         self.player_sprite = None
@@ -49,7 +55,7 @@ class PlatformGame(arcade.Window):
         self.player_list = arcade.SpriteList()
         self.wall_list = arcade.SpriteList(use_spatial_hash=True)
         self.coin_manager = CoinManager()
-        self.enemy_list = arcade.SpriteList()
+        self.enemy_manager = EnemyManager()
 
         self.camera = arcade.camera.Camera2D()
         self.gui_camera = arcade.camera.Camera2D()
@@ -98,15 +104,31 @@ class PlatformGame(arcade.Window):
                 )
         
         coin_positions = [
-            (200, 100, 'normal'),
-            (400, 250, 'silver'),
-            (600, 300, 'gold'),
-            (350, 250, 'normal'),
-            (500, 150, 'special')
+            (200, 50, 'normal'),
+            (400, 80, 'silver'),
+            (600, 100, 'gold'),
+            (350, 70, 'normal'),
+            (500, 90, 'special')
         ]
 
         for x, y, coin_type in coin_positions:
             self.coin_manager.add_coin(x, y, coin_type)
+
+        enemy_positions = [
+            (250, 50, 'normal'),
+            (450, 80, 'fast'), 
+            (650, 80, 'large'),
+            (750, 50, 'normal'),
+            (550, 80, 'elite')
+        ]
+    
+        for x, y, variant in enemy_positions:
+            goomba = create_goomba(x, y, variant)
+            self.enemy_manager.enemy_list.append(goomba)
+            self.enemy_manager.total_enemies += 1
+
+        for enemy in self.enemy_manager.enemy_list:
+            enemy.change_y = 0
 
     def on_draw(self):
         #Render screen
@@ -116,9 +138,24 @@ class PlatformGame(arcade.Window):
         self.camera.use()
 
         self.wall_list.draw()
-        self.coin_manager.draw()
+
+        for coin in self.coin_manager.coin_list:
+            if hasattr(coin, 'coin_color'):
+                arcade.draw_circle_filled(
+                    coin.center_x, coin.center_y,
+                    settings.COIN_SIZE // 2,
+                    coin.coin_color
+                )
+
+        for enemy in self.enemy_manager.enemy_list:
+            if hasattr(enemy, 'goomba_color') and hasattr(enemy, 'goomba_size'):
+                arcade.draw_circle_filled(
+                    enemy.center_x, enemy.center_y,
+                    enemy.goomba_size // 2,
+                    enemy.goomba_color
+                )
+
         self.player_list.draw()
-        self.enemy_list.draw()
 
         self.gui_camera.use()
 
@@ -151,6 +188,15 @@ class PlatformGame(arcade.Window):
             settings.WHITE,
             18
         )
+
+        if settings.SHOW_ENEMIES:
+            enemy_stats = self.enemy_manager.get_stats()
+            arcade.draw_text(
+                f"Enemies: {enemy_stats['defeated_enemies']}/{enemy_stats['total_enemies']}",
+                10, settings.SCREEN_HEIGHT - 120,
+                settings.WHITE,
+                18
+            )
 
         if settings.SHOW_FPS:
             fps = f"FPS: {int(arcade.get_fps())}"
@@ -192,10 +238,11 @@ class PlatformGame(arcade.Window):
             #Would draw collision rectanges - input later
             pass
 
+        if settings.DEBUG_MODE:
+            self.enemy_manager.draw_debug()
+
     def on_update(self, delta_time):
         #Update logic, called once per frame
-        #Args: delta_time (time since last update)
-
         if self.current_state != settings.GAME_STATES["PLAYING"]:
             return
         
@@ -206,15 +253,66 @@ class PlatformGame(arcade.Window):
         self.player_sprite.set_ground_state(self.physics_engine.can_jump())
 
         self.player_list.update()
-        self.enemy_list.update()
 
         collection_info = self.coin_manager.update(delta_time, self.player_sprite)
         if collection_info:
             self.score += collection_info['value']
             print(f"Collected {collection_info['coin_type']} coin! +{collection_info['value']} points. Score: {self.score}")
 
-        self.check_coin_collections()
+        self.enemy_manager.update(delta_time, self.player_sprite)
 
+        for enemy in self.enemy_manager.enemy_list:
+            if enemy.state != EnemyState.DEAD:
+                old_x = enemy.center_x
+                enemy.center_x += enemy.change_x
+
+                wall_hits = arcade.check_for_collision_with_list(enemy, self.wall_list)
+                for wall in wall_hits:
+                    enemy.center_x = old_x
+                    enemy.handle_wall_collision('left' if enemy.change_x > 0 else "right")
+                    break
+
+                if enemy.on_ground:
+                    # Create a small test point below the enemy to check for edge
+                    test_x = enemy.center_x + (enemy.change_x * 2)  # Look ahead
+                    test_y = enemy.center_y - 50  # Look down
+                    
+                    # If no ground ahead, turn around
+                    ground_ahead = False
+                    for wall in self.wall_list:
+                        if (wall.left <= test_x <= wall.right and 
+                            wall.bottom <= test_y <= wall.top):
+                            ground_ahead = True
+                            break
+                    
+                    if not ground_ahead:
+                        enemy.handle_edge_detection(True)
+                
+                if enemy.affected_by_gravity:
+                    # Apply gravity
+                    enemy.change_y -= settings.GRAVITY
+                    
+                    # Terminal velocity
+                    if enemy.change_y < -settings.TERMINAL_VELOCITY:
+                        enemy.change_y = -settings.TERMINAL_VELOCITY
+                    
+                    # Update vertical position
+                    enemy.center_y += enemy.change_y
+                    
+                    # Check collision with ground
+                    ground_hits = arcade.check_for_collision_with_list(enemy, self.wall_list)
+                    enemy.on_ground = False
+                    for wall in ground_hits:
+                        if enemy.change_y < 0 and enemy.bottom <= wall.top + 5:
+                            enemy.bottom = wall.top
+                            enemy.change_y = 0
+                            enemy.on_ground = True
+                            break
+
+        # THEN update enemy manager (handles AI and behavior)
+        self.enemy_manager.update(delta_time, self.player_sprite)
+        self.check_coin_collections()
+        self.check_enemy_interactions()
 
         self.update_camera()
 
@@ -228,6 +326,45 @@ class PlatformGame(arcade.Window):
 
             #Play sound when we load it
             # self.sound_manage.play_sound("collection_info['sound']")
+
+    def check_enemy_interactions(self):
+        interactions = self.enemy_manager.check_player_interactions(self.player_sprite, self.physics_engine)
+
+        for interaction in interactions:
+            print(f"Enemy Interaction: {interaction}") #Debug
+            if interaction['type'] == 'stomp':
+                self.score += interaction['score']
+                print(f"Stomped {interaction['enemy_type']} {interaction['variant']} +{interaction['score']} points. Score: {self.score}")
+
+                if interaction['bounce_player']:
+                    bounce_height = interaction.get('bounce_height', 8)
+                    self.player_sprite.change_y = bounce_height
+
+                # Play sound effect when we add sounds
+                # self.sound_manager.play_sound(interaction['sound'])
+
+            elif interaction['type'] == 'damage':
+                if not settings.INVINCIBLE_MODE:
+                    print(f"Player should take damage from {interaction['enemy_type']}")
+                    damage = interaction['damage_to_player']
+
+                    if hasattr(self.player_sprite, 'take_damage'):
+                        player_died = self.player_sprite.take_damage() if hasattr(self.player_sprite, 'take_damage') else False
+                    else:
+                        self.lives -= 1
+                        player_died = self.lives <= 0
+
+
+                    if player_died:
+                        self.player_die()
+                    else:
+                        print(f"Player hurt by {interaction['enemy_type']}")
+
+                        if interaction.get('knockback'):
+                            self.player_sprite.change_x = 3 if self.player_sprite.change_x >= 0 else -3
+
+                    # Play sound effect when we add sounds
+                    # self.sound_manager.play_sound(interaction['sound'])
 
     def update_camera(self):
         #update camera to follow player
