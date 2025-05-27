@@ -121,3 +121,6 @@ GAME_STATES = {
 }
 
 ENABLE_SOUND = True
+MASTER_VOLUME = 0.7    # Volume control (0.0 to 1.0)
+SFX_VOLUME = 0.8        
+MUSIC_VOLUME = 0.4
