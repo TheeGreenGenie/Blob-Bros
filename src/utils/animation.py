@@ -243,7 +243,7 @@ class AnimationController:
             self.mirrored = mirrored
             self._update_sprite_texture()
 
-class Animationmanager:
+class AnimationManager:
 
     def __init__(self, asset_loader=None):
         self.asset_loader = asset_loader
@@ -253,4 +253,176 @@ class Animationmanager:
 
         self.global_effects: List[Callable] = []
 
+    def set_asset_loader(self, asset_loader):
+        self.asset_loader = asset_loader
+
+    def create_controller(self, sprite: arcade.Sprite, animation_set: str = None) -> AnimationController:
+        controller = AnimationController(sprite)
+        self.controllers[sprite] = controller
+
+        if animation_set and animation_set in self.animation_definitions:
+            self._load_animation_set(controller, animation_set)
+
+        return controller
     
+    def get_controller(self, sprite: arcade.Sprite) -> Optional[AnimationController]:
+        return self.controllers.get(sprite)
+    
+    def update_all(self, delta_time: float):
+        sprites_to_remove = []
+        for sprite in self.controllers:
+            if not hasattr(sprite, 'center_x'):
+                sprites_to_remove.append(sprite)
+
+        for sprite in sprites_to_remove:
+            del self.controllers[sprite]
+
+        for controller in self.controllers.values():
+            controller.update(delta_time)
+
+    def _create_animation_definitions(self) -> Dict[str, Dict]:
+        return {
+            'player': {
+                'idle': {
+                    'frames': ['player_idle'],
+                    'duration': 0.5,
+                    'mode': AnimationPlayback.LOOP
+                },
+                'walk': {
+                    'frames': ['player_walk_1', 'player_walk_2'],
+                    'duration': 0.2,
+                    'mode': AnimationPlayback.LOOP
+                },
+                'run': {
+                    'frames': ['player_walk_1', 'player_walk_2'],
+                    'duration': 0.1,
+                    'mode': AnimationPlayback.LOOP
+                },
+                'jump': {
+                    'frames': ['player_jump'],
+                    'duration': 0.1,
+                    'mode': AnimationPlayback.HOLD_LAST
+                },
+                'crouch': {
+                    'frames': ['player_crouch'],
+                    'duration': 0.1,
+                    'mode': AnimationPlayback.HOLD_LAST
+                }
+            },
+            'goomba': {
+                'walk': {
+                    'frames': ['goomba_normal'],  # Could add more frames
+                    'duration': 0.3,
+                    'mode': AnimationPlayback.LOOP
+                },
+                'die': {
+                    'frames': ['goomba_dead'],
+                    'duration': 0.2,
+                    'mode': AnimationPlayback.ONCE
+                }
+            },
+            'coin': {
+                'spin': {
+                    'frames': ['coin_normal'],  # Could add rotating frames
+                    'duration': 0.2,
+                    'mode': AnimationPlayback.LOOP
+                },
+                'collect': {
+                    'frames': ['coin_normal'],  # Could add collection effect
+                    'duration': 0.1,
+                    'mode': AnimationPlayback.ONCE
+                }
+            },
+            'question_block': {
+                'idle': {
+                    'frames': ['question_block'],
+                    'duration': 0.3,
+                    'mode': AnimationPlayback.LOOP
+                },
+                'hit': {
+                    'frames': ['question_block_empty'],
+                    'duration': 0.1,
+                    'mode': AnimationPlayback.ONCE
+                }
+            }
+        }
+    
+    def _load_animations_set(self, controller: AnimationController, animation_set: str):
+        if not self.asset_loader:
+            print("Warning: No asset loader available for animations")
+            return
+        
+        animation_def = self.animation_definitions.get(animation_set, {})
+
+        for anim_name, anim_data in animation_def.items():
+            frames  = []
+
+            for frame_name in anim_data['frames']:
+                texture = self.asset_loader.get_texture(frame_name)
+                if texture:
+                    frames.append(texture)
+                else:
+                    if hasattr(self.asset_loader, '_create_colored_texture'):
+                        fallback_texture = self.asset_loader._create_colored_texture(
+                            frame_name, (32, 32), (255, 0, 255)
+                        )
+                        frames.append(fallback_texture)
+
+            if frames:
+                animation = Animation(
+                    name=anim_name,
+                    frames=frames,
+                    frame_duration=anim_data.get('duration', 0.1),
+                    playback_mode=anim_data.get('mode', AnimationPlayback.LOOP)
+                )
+                controller.add_anmiation(animation)
+
+    def create_custom_animation(self, name: str, texture_names: List[str], 
+                              duration: float = 0.1, 
+                              playback_mode: AnimationPlayback = AnimationPlayback.LOOP) -> Optional[Animation]:
+        if not self.asset_loader:
+            return None
+        
+        frames = []
+        for texture_name in texture_names:
+            texture = self.asset_loader.get_texture(texture_name)
+            if texture:
+                frames.append(texture)
+
+        if frames:
+            return Animation(name, frames, duration, playback_mode)
+        return None
+    
+    def cleanup_sprite(self, sprite: arcade.Sprite):
+        if sprite in self.controllers:
+            del self.controllers[sprite]
+
+def create_animation_from_spritesheet(name: str, spritesheet_path: str, frame_width: int, frame_height: int, frame_count: int, duration: float = 0.1) -> Optional[Animation]:
+    print(f"Spritesheet animation creation not yet implemented: {name}")
+    return None
+
+def setup_player_animations(sprite: arcade.Sprite, animation_manager: AnimationManager) -> AnimationController:
+    controller = animation_manager.create_controller(sprite, 'player')
+    return controller
+
+def setup_enemy_animations(sprite: arcade.Sprite, enemy_type: str, animation_manager: AnimationManager) -> AnimationController:
+    animation_set = {
+        'goomba': 'goomba',
+        'koopa': 'koopa'
+    }.get(enemy_type, 'goomba')
+
+    controller = animation_manager.create_controller(sprite, animation_set)
+    return controller
+
+_animation_manager = None
+
+def get_animation_manager() -> AnimationManager:
+    global _animation_manager
+    if _animation_manager is None:
+        _animation_manager = AnimationManager()
+    return _animation_manager
+
+def initiailize_animation_manager(asset_loader) -> AnimationManager:
+    manager = get_animation_manager()
+    manager.set_asset_loader(asset_loader)
+    return manager
