@@ -58,4 +58,92 @@ class Animation:
         self.frame_events: Dict[int, List[Callable]] = {}
         self.on_complete_callbacks: List[Callable] = []
 
+    def update(self, delta_time: float) -> bool:
+        if not self.is_playing or self.is_finished or not self.frames:
+            return False
+        
+        self.frame_time += delta_time
+        frame_changed = False
+
+        if self.frame_time >= self.frame_duration:
+            frame_changed = True
+            self.frame_time = 0.0
+
+            if self.current_frame in self.frame_events:
+                for callback in self.frame_events[self.current_frame]:
+                    try:
+                        callback()
+                    except Exception as e:
+                        print(f"Animation frame event error: {e}")
+
+            self._advance_frame()
+
+        return frame_changed
     
+    def _advance_frame(self):
+        if self.playback_mode == AnimationPlayback.LOOP:
+            self.current_frame = (self.current_frame + 1) % len(self.frames)
+
+        elif self.playback_mode == AnimationPlayback.ONCE:
+            if self.current_frame < len(self.frames) - 1:
+                self.current_frame += 1
+            else:
+                self.is_finished = True
+                self._trigger_completion()
+
+        elif self.playback_mode == AnimationPlayback.PING_PONG:
+            if self.ping_pong_forward:
+                self.current_frame += 1
+                if self.current_frame >= len(self.frames) -1:
+                    self.ping_pong_forward = False
+
+            else:
+                self.current_frame -= 1
+                if self.current_frame <= 0:
+                    self.ping_pong_forward = True
+
+        elif self.playback_mode == AnimationPlayback.HOLD_LAST:
+            if self.current_frame < len(self.frames) - 1:
+                self.current_frame += 1
+            else:
+                self.is_finished = True
+                self._trigger_completion()
+
+    def _trigger_completion(self):
+        for callback in self.on_complete_callbacks:
+            try:
+                callback()
+            except Exception as e:
+                print(f"Animation completion callback error: {e}")
+
+    def get_current_texture(self) -> Optional[arcade.Texture]:
+        if not self.frames or self.current_frame >= len(self.frames):
+            return None
+        return self.frames[self.current_frame]
+    
+    def restart(self):
+        self.current_frame = 0
+        self.frame_time = 0.0
+        self.is_finished = False
+        self.ping_pong_forward = True
+        self.is_playing = True
+
+    def pause(self):
+        self.is_playing = False
+
+    def resume(self):
+        self.is_playing = True
+
+    def set_frame(self, frame_index: int):
+        if 0 <= frame_index < len(self.frames):
+            self.current_frame = frame_index
+            self.frame_time = 0.0
+
+    def add_frame_event(self, frame_index: int, callback: Callable):
+        if frame_index not in self.frame_events:
+            self.frame_events[frame_index] = []
+        self.frame_events[frame_index].append(callback)
+
+    def add_completion_callback(self, callback: Callable):
+        self.on_complete_callbacks.append(callback)
+
