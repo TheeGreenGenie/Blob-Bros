@@ -6,11 +6,10 @@ import settings
 from user import Player, PlayerInputHandler
 from physics import PlatformPhysicsEngine
 from entities.coin import CoinManager
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__))))
-
 from enemies.enemy_base import EnemyManager, EnemyState
 from enemies.goomba import Goomba, create_goomba
+from ui.hud import HUD
+from ui.menu import MenuManager
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -31,6 +30,12 @@ class PlatformGame(arcade.Window):
         self.wall_list = None
         self.enemy_manager  = None
         self.coin_manager = None
+
+        self.hud_manager = None
+        self.menu_manager = None
+
+        self.level_start_time = 0
+        self.level_time = 0
 
         self.player_sprite = None
         self.player_input = None
@@ -74,6 +79,16 @@ class PlatformGame(arcade.Window):
             gravity=settings.GRAVITY,
             interactive_tiles=self.coin_manager.coin_list
         )
+
+        self.hud_manager = HUD(settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+        self.menu_manager = MenuManager(settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
+        self.menu_manager.show_menu('main', push_current=False)
+
+        self.current_state = settings.GAME_STATES['MENU']
+        self.level_start_time = 0
+        self.level_time = 0
+
+        print('Game setup complete!')
 
 
     def create_test_level(self):
@@ -132,37 +147,45 @@ class PlatformGame(arcade.Window):
 
     def on_draw(self):
         #Render screen
-
         self.clear()
 
-        self.camera.use()
+        if self.current_state == settings.GAME_STATES['MENU']:
+            self.menu_manager.draw()
+        elif self.current_state in [settings.GAME_STATES['PLAYING'], settings.GAME_STATES['PAUSED'], settings.GAME_STATES['GAME_OVER']]:
+            self._draw_game_world()
+            self.hud_manager.draw()
 
+            if self.current_state == settings.GAME_STATES['PAUSED']:
+                self.menu_manager.draw()
+            elif self.current_state == settings.GAME_STATES['GAME_OVER']:
+                self.menu_manager.draw()
+
+    def _draw_game_world(self):
+        self.camera.use()
         self.wall_list.draw()
 
         for coin in self.coin_manager.coin_list:
             if hasattr(coin, 'coin_color'):
-                arcade.draw_circle_filled(
-                    coin.center_x, coin.center_y,
-                    settings.COIN_SIZE // 2,
+                arcade.draw_lbwh_rectangle_filled(
+                    coin.center_x - settings.COIN_SIZE//2,
+                    coin.center_y - settings.COIN_SIZE//2,
+                    settings.COIN_SIZE,
+                    settings.COIN_SIZE,
                     coin.coin_color
                 )
 
         for enemy in self.enemy_manager.enemy_list:
             if hasattr(enemy, 'goomba_color') and hasattr(enemy, 'goomba_size'):
-                arcade.draw_circle_filled(
-                    enemy.center_x, enemy.center_y,
-                    enemy.goomba_size // 2,
+                arcade.draw_lbwh_rectangle_filled(
+                    enemy.center_x - enemy.goomba_size//2,
+                    enemy.center_y - enemy.goomba_size//2,
+                    enemy.goomba_size,
+                    enemy.goomba_size,
                     enemy.goomba_color
                 )
 
         self.player_list.draw()
-
         self.gui_camera.use()
-
-        self.draw_ui()
-
-        if self.show_debug:
-            self.draw_debug_info()
 
     def draw_ui(self):
         #Draw ui like score & lives
@@ -243,63 +266,38 @@ class PlatformGame(arcade.Window):
 
     def on_update(self, delta_time):
         #Update logic, called once per frame
-        if self.current_state != settings.GAME_STATES["PLAYING"]:
-            return
-        
+        if self.current_state == settings.GAME_STATES['MENU']:
+            self.menu_manager.update(delta_time)
+        elif self.current_state == settings.GAME_STATES['PLAYING']:
+            self._update_gameplay(delta_time)
+        elif self.current_state == settings.GAME_STATES['PAUSED']:
+            self.menu_manager.update(delta_time)
+        elif self.current_state == settings.GAME_STATES['GAME_OVER']:
+            self.menu_manager.update(delta_time)
+
+    def _update_gameplay(self, delta_time):
         self.frame_count += 1
-
+        self.level_time += delta_time
         self.player_input.update()
-        self.physics_engine.update()
-        self.player_sprite.set_ground_state(self.physics_engine.can_jump())
-
-        self.player_list.update()
-
-        collection_info = self.coin_manager.update(delta_time, self.player_sprite)
-        if collection_info:
-            self.score += collection_info['value']
-            print(f"Collected {collection_info['coin_type']} coin! +{collection_info['value']} points. Score: {self.score}")
-
-        self.enemy_manager.update(delta_time, self.player_sprite)
-
         for enemy in self.enemy_manager.enemy_list:
-            if enemy.state != EnemyState.DEAD:
+            if enemy.state != 'dead':
                 old_x = enemy.center_x
                 enemy.center_x += enemy.change_x
 
                 wall_hits = arcade.check_for_collision_with_list(enemy, self.wall_list)
                 for wall in wall_hits:
                     enemy.center_x = old_x
-                    enemy.handle_wall_collision('left' if enemy.change_x > 0 else "right")
+                    enemy.handle_wall_collision('left' if enemy.change_x > 0  else 'right')
                     break
 
-                if enemy.on_ground:
-                    # Create a small test point below the enemy to check for edge
-                    test_x = enemy.center_x + (enemy.change_x * 2)  # Look ahead
-                    test_y = enemy.center_y - 50  # Look down
-                    
-                    # If no ground ahead, turn around
-                    ground_ahead = False
-                    for wall in self.wall_list:
-                        if (wall.left <= test_x <= wall.right and 
-                            wall.bottom <= test_y <= wall.top):
-                            ground_ahead = True
-                            break
-                    
-                    if not ground_ahead:
-                        enemy.handle_edge_detection(True)
-                
                 if enemy.affected_by_gravity:
-                    # Apply gravity
                     enemy.change_y -= settings.GRAVITY
-                    
-                    # Terminal velocity
+
                     if enemy.change_y < -settings.TERMINAL_VELOCITY:
                         enemy.change_y = -settings.TERMINAL_VELOCITY
-                    
-                    # Update vertical position
+
                     enemy.center_y += enemy.change_y
-                    
-                    # Check collision with ground
+
                     ground_hits = arcade.check_for_collision_with_list(enemy, self.wall_list)
                     enemy.on_ground = False
                     for wall in ground_hits:
@@ -309,14 +307,33 @@ class PlatformGame(arcade.Window):
                             enemy.on_ground = True
                             break
 
-        # THEN update enemy manager (handles AI and behavior)
         self.enemy_manager.update(delta_time, self.player_sprite)
+        self.physics_engine.update()
+        self.player_sprite.set_ground_state(self.physics_engine.can_jump())
+        self.player_list.update()
+
+        collection_info = self.coin_manager.update(delta_time, self.player_sprite)
+        if collection_info:
+            self.score += collection_info['value']
+            print(f"Collected {collection_info['coin_type']} coin! +{collection_info['value']} points. Score: {self.score}")
+
         self.check_coin_collections()
         self.check_enemy_interactions()
-
         self.update_camera()
-
         self.check_game_state()
+
+        hud_data = {
+            'score': self.score,
+            'lives': self.lives,
+            'level_time': self.level_time,
+            'level_name': '1-1',
+            'coins_collected': self.coin_manager.collected_coins,
+            'total_coins': self.coin_manager.total_coins,
+            'enemies_defeated': self.enemy_manager.defeated_enemies,
+            'total_enemies': self.enemy_manager.total_enemies
+        }
+        self.hud_manager.update(delta_time, hud_data)
+
 
     def check_coin_collections(self):
         collections = self.coin_manager.check_player_collection(self.player_sprite)
@@ -408,6 +425,12 @@ class PlatformGame(arcade.Window):
 
         if self.lives <= 0:
             self.current_state = settings.GAME_STATES["GAME_OVER"]
+            self.menu_manager.set_game_over_stats(
+                self.score, '1-1',
+                self.coin_manager.collected_coins,
+                self.enemy_manager.defeated_enemies
+            )
+            self.menu_manager.show_menu('game_over', push_current=False)
             print("Game Over!")
         else:
             self.respawn_player()
@@ -420,17 +443,83 @@ class PlatformGame(arcade.Window):
         self.player_sprite.change_y = 0
 
     def on_key_press(self, key, modifiers):
-        #Calls player class for movement and universal controls f1 & p
-        self.player_input.on_key_press(key, modifiers)
-        #toggle debug mode
-        if key == arcade.key.F1:
-            self.show_debug = not self.show_debug
+        #DEBUG CODE
+        print(f"Key pressed: {key}, Current state: {self.current_state}")  # Debug line
 
-        elif key == arcade.key.P:
-            if self.current_state == settings.GAME_STATES["PLAYING"]:
-                self.current_state = settings.GAME_STATES["PAUSED"]
-            elif self.current_state == settings.GAME_STATES["PAUSED"]:
-                self.current_state = settings.GAME_STATES["PLAYING"]
+        #Handles key presses
+        if self.current_state == settings.GAME_STATES['MENU']:
+            action = self.menu_manager.handle_input(key)
+            print(f"Menu action: {action}")
+            self._handle_menu_action(action)
+        elif self.current_state == settings.GAME_STATES['PLAYING']:
+            self.player_input.on_key_press(key, modifiers)
+
+            if key == arcade.key.F1:
+                self.show_debug = not self.show_debug
+            elif key == arcade.key.P or key == arcade.key.ESCAPE:
+                self.current_state = settings.GAME_STATES['PAUSED']
+                self.menu_manager.show_menu('pause', push_current=False)
+        elif self.current_state == settings.GAME_STATES['PAUSED']:
+            action = self.menu_manager.handle_input(key)
+            self._handle_menu_action(action)
+        elif self.current_state == settings.GAME_STATES['GAME_OVER']:
+            action = self.menu_manager.handle_input(key)
+            self._handle_menu_action(action)
+
+    def _handle_menu_action(self, action):
+        if action == 'start_game':
+            self._start_new_game()
+        elif action == 'settings':  # Add this
+            self.menu_manager.show_menu('settings')
+        elif action == 'high_scores':  # Add this
+            self._show_high_scores()
+        elif action == 'credits':  # Add this
+            self._show_credits()
+        elif action == 'resume':
+            self.current_state = settings.GAME_STATES['PLAYING']
+        elif action == 'restart_level':
+            self._restart_game()
+        elif action == 'play_again':
+            self._start_new_game()
+        elif action == 'restart':
+            self._restart_game()
+        elif action == 'main_menu':
+            self.current_state = settings.GAME_STATES["MENU"]
+            self.menu_manager.show_menu('main', push_current=False)
+        elif action == 'quit':
+            self.close()
+
+    def _show_high_scores(self):
+        print("High scores feature not yer implemented")
+
+    def _show_credits(self):
+        print("Credits not implemented yet")
+
+    def _start_new_game(self):
+        self.score = 0
+        self.lives = settings.PLAYER_LIVES
+        self.level_time = 0
+        self.level_start_time = 0
+
+        self.respawn_player()
+        self.coin_manager.reset()
+        self.enemy_manager.reset()
+
+        self.create_test_level()
+
+        self.physics_engine = PlatformPhysicsEngine(
+            self.player_sprite,
+            self.wall_list,
+            gravity=settings.GRAVITY,
+            interactive_tiles=self.coin_manager.coin_list
+        )
+
+        self.current_state = settings.GAME_STATES['PLAYING']
+
+    def _restart_game(self):
+        self.level_time = 0
+        self.respawn_player()
+        self.current_state = settings.GAME_STATES['PLAYING']
 
     def on_key_release(self, key, modifiers):
         self.player_input.on_key_release(key, modifiers)

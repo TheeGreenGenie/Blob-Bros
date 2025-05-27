@@ -149,16 +149,19 @@ class HUD:
         time_color = self.time_color if not self.time_warning else self.warning_color
 
         self._draw_text(
-            f"TIME: {remaining_time:03d}",
-            self.layout['time_pos'][0], self.layout['times_pos'][1],
+            f"TIME: {int(remaining_time):03d}",
+            self.layout['time_pos'][0], self.layout['time_pos'][1],
             time_color, self.font_size_large
         )
 
+        level_text = f"WORLD {self.level_name}"
+        text_width = len(level_text) * self.font_size_medium // 2  # Rough text width estimation
+        centered_x = self.layout['level_pos'][0] - (text_width // 2)
+        
         self._draw_text(
-            f"WORLD {self.level_name}",
-            self.layout['level_pos'][0], self.layout['level_pos'][1],
-            self.text_color, self.font_size_medium,
-            anchor_x='center'
+            level_text,
+            centered_x, self.layout['level_pos'][1],
+            self.text_color, self.font_size_medium
         )
 
     def _draw_progress_info(self):
@@ -193,8 +196,8 @@ class HUD:
     def _draw_progress_bar(self, x, y, width, height, percentage, color):
         arcade.draw_lbwh_rectangle_filled(x, y, width, height, (64, 64, 64))
 
-        arcade.draw_rect_outline(x + width//2, y + height//2, width, height, self.text_color, 1)
-
+        arcade.draw_lbwh_rectangle_outline(x, y, width, height, self.text_color, 1)
+        
         if percentage > 0:
             fill_width = (percentage / 100) * width
             arcade.draw_lbwh_rectangle_filled(
@@ -229,10 +232,19 @@ class HUD:
             )
 
     def _draw_text(self, text, x, y, color, font_size, anchor_x='left', anchor_y='bottom'):
-        arcade._draw_text(
-            text, x, y, color, font_size,
-            anchor_x=anchor_x, anchor_y=anchor_y
-        )
+        if anchor_x == "center":
+            text_width = len(text) * font_size // 2  
+            x = x - (text_width // 2)
+        elif anchor_x == "right":
+            text_width = len(text) * font_size // 2  
+            x = x - text_width
+        
+        if anchor_y == "center":
+            y = y - font_size // 2  
+        elif anchor_y == "top":
+            y = y - font_size  
+        
+        arcade.draw_text(text, x, y, color, font_size)
 
     def show_message(self, message, duration=3.0, color=None):
         self.temp_message = message
@@ -306,21 +318,21 @@ class HUDManager:
             (0, 0, 0, 128)
         )
 
-        arcade.draw_text(
-            "PAUSED",
-            self.main_hud.screen_width // 2,
-            self.main_hud.screen_height // 2,
-            settings.WHITE, 48,
-            anchor_x='center', anchor_y='center'
-        )
+        text = "PAUSED"
+        font_size = 48
+        text_width = len(text) * font_size * 0.6  # Approximate width calculation
+        text_height = font_size
+        x = self.main_hud.screen_width // 2 - text_width // 2
+        y = self.main_hud.screen_height // 2 - text_height // 2
+        arcade.draw_text(text, x, y, settings.WHITE, font_size)
 
-        arcade.draw_text(
-            "Press P to Resume",
-            self.main_hud.screen_width // 2,
-            self.main_hud.screen_height // 2 - 60,
-            settings.WHITE, 24,
-            anchor_x='center', anchor_y='center'
-        )
+        text = "Press P to Resume"
+        font_size = 24
+        text_width = len(text) * font_size * 0.6  # Approximate width calculation
+        text_height = font_size
+        x = self.main_hud.screen_width // 2 - text_width // 2
+        y = self.main_hud.screen_height // 2 - 60 - text_height // 2
+        arcade.draw_text(text, x, y, settings.WHITE, font_size)
 
     def _draw_game_over_overlay(self):
         arcade.draw_lbwh_rectangle_filled(
@@ -330,18 +342,18 @@ class HUDManager:
             (128, 0, 0, 128)
         )
 
-        arcade.draw_text(
-            'GAME OVER',
-            self.main_hud.screen_width // 2,
-            self.main_hud.screen_height // 2,
-            (255, 100, 100), 48,
-            anchor_x='center', anchor_y='center'
-        )
+        text = "GAME OVER"
+        font_size = 48
+        text_width = len(text) * font_size * 0.6  
+        text_height = font_size
+        x = self.main_hud.screen_width // 2 - text_width // 2
+        y = self.main_hud.screen_height // 2 - text_height // 2
+        arcade.draw_text(text, x, y, (255, 100, 100), font_size)
 
-        arcade.draw_text(
-            "Press R to Restart",
-            self.main_hud.screen_width // 2,
-            self.main_hud.screen_height // 2 - 100,
-            settings.WHITE, 18,
-            anchor_x='center', anchor_y='cemter'
-        )
+        text = "Press R to Restart"
+        font_size = 18
+        text_width = len(text) * font_size * 0.6  
+        text_height = font_size
+        x = self.main_hud.screen_width // 2 - text_width // 2
+        y = self.main_hud.screen_height // 2 - 100 - text_height // 2
+        arcade.draw_text(text, x, y, settings.WHITE, font_size)

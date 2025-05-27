@@ -35,7 +35,7 @@ class BaseMenu:
         self.title_color = settings.WHITE
         self.item_color = settings.WHITE
         self.selected_color = (255, 255, 0)
-        self.disbaled_color = (128, 128, 128)
+        self.disabled_color = (128, 128, 128)
 
         self.title_size = 48
         self.item_size = 24
@@ -46,7 +46,7 @@ class BaseMenu:
         self.pulse_amplitude = 10
 
         self.input_cooldown = 0
-        self.input_delay = 0.15
+        self.input_delay = 0.05
 
     def add_item(self, text, action=None, enabled=True, submenu=None):
         item = MenuItem(text, action, enabled, submenu)
@@ -72,10 +72,15 @@ class BaseMenu:
                 item.selected = False
 
     def handle_input(self, key):
+        #DEBUG CODE
+        print(f"BaseMenu handle_input called with key: {key}") 
         if self.input_cooldown > 0:
+            print('Input on cooldown')
             return None
         
         if key == arcade.key.UP:
+            #DEBUG CODE
+            print('Up key detected')
             self.move_selection(-1)
             self.input_cooldown = self.input_delay
 
@@ -99,7 +104,7 @@ class BaseMenu:
             if self.items[self.selected_index].enabled or self.selected_index == start_index:
                 break
 
-    def select_current_items(self):
+    def select_current_item(self):
         if not self.items or self.selected_index >= len(self.items):
             return None
         
@@ -116,11 +121,11 @@ class BaseMenu:
         )
 
         title_y = self.screen_height - self.title_y_offset
+        title_x = self.screen_width // 2 - len(self.title) * self.title_size // 4
         arcade.draw_text(
             self.title,
-            self.screen_width // 2, title_y,
+            title_x, title_y,
             self.title_color, self.title_size,
-            anchor_x='center', anchor_y='center'
         )
 
         self.draw_items()
@@ -136,29 +141,46 @@ class BaseMenu:
             y_position = start_y - (i *self.item_spacing)
 
             if not item.enabled:
-                color = self.disbaled_color
+                color = self.disabled_color
                 offset = 0
             elif item.selected:
                 pulse = math.sin(self.animation_timer * 5) * self.pulse_amplitude
                 color = self.selected_color
                 offset = pulse
+
+                text_width = len(item.text) * self.item_size * 0.6
+                arcade.draw_lbwh_rectangle_filled(
+                    (self.screen_width // 2) - (text_width // 2) - 20,
+                    y_position - 5,
+                    text_width + 40,
+                    self.item_size + 10,
+                    (50, 50, 100, 128)
+                )
             else:
                 color = self.item_color
+                offset = 0
 
-        arcade.draw_text(
-            item.text,
-            self.screen_width // 2 + offset, y_position,
-            color, self.item_size,
-            anchor_x='center', anchor_y='center'
-        )
+            text_width = len(item.text) * self.item_size * 0.6
+            text_x = (self.screen_width // 2) - (text_width // 2) + offset
 
-        if item.selected:
             arcade.draw_text(
-                "►",
-                self.screen_width // 2 - 150 + offset, y_position,
-                self.selected_color, self.item_size,
-                anchor_x='center', anchor_y='center'
+                item.text,
+                text_x, y_position,
+                color, self.item_size,
             )
+
+            if item.selected:
+                arcade.draw_text(
+                    "►",
+                    text_x - 50, y_position,
+                    self.selected_color, self.item_size,
+                )
+
+                arcade.draw_text(
+                    "◄",
+                    text_x + text_width + 30, y_position,
+                    self.selected_color, self.item_size
+                )
 
 class MainMenu(BaseMenu):
 
@@ -177,7 +199,17 @@ class MainMenu(BaseMenu):
         self.star_positions = []
         self.generate_background_stars()
 
-    def generate_background_stars(self, delta_time):
+    def generate_background_stars(self):
+        for _  in range(50):
+            x = random.randint(0, self.screen_width)
+            y = random.randint(0, self.screen_height)
+            size = random.randint(1, 3)
+            speed = random.uniform(10, 30)
+            self.star_positions.append([x, y, size, speed])
+
+    def update(self, delta_time):
+        super().update(delta_time)
+
         for star in self.star_positions:
             star[1] -= star[3] * delta_time   # Move star down
             if star[1] < 0:   # Reset if leaves screen
@@ -204,28 +236,37 @@ class MainMenu(BaseMenu):
             arcade.draw_circle_filled(star[0], star[1], star[2], settings.WHITE)
 
         shadow_offset = 3
+        
+        # Calculate title positioning manually
+        title_width = len(self.title) * self.title_size // 2  # Rough text width estimation
+        title_x = (self.screen_width // 2) - (title_width // 2)
+        title_y = self.screen_height - self.title_y_offset
+        
+        # Draw title shadow
         arcade.draw_text(
             self.title,
-            self.screen_width // 2 + shadow_offset,
-            self.screen_height - self.title_y_offset - shadow_offset,
-            (50, 50, 50), self.title_size,
-            anchor_x='center', anchor_y='center'
+            title_x + shadow_offset,
+            title_y - shadow_offset,
+            (50, 50, 50), self.title_size
         )
 
+        # Draw main title
         arcade.draw_text(
             self.title,
-            self.screen_width // 2, self.screen_height - self.title_y_offset,
-            self.title_color, self.title_size,
-            anchor_x='center', anchor_y='center'
+            title_x, title_y,
+            self.title_color, self.title_size
         )
 
         self.draw_items()
 
+        # Draw subtitle with manual centering
+        subtitle = "Use ↑↓ to navigate, ENTER to select"
+        subtitle_width = len(subtitle) * 16 // 2  # Rough text width estimation
+        subtitle_x = (self.screen_width // 2) - (subtitle_width // 2)
         arcade.draw_text(
-            "Use ↑↓ to navigate, ENTER to select",
-            self.screen_width // 2, 50,
-            settings.WHITE, 16,
-            anchor_x='center', anchor_y='center'
+            subtitle,
+            subtitle_x, 50,
+            settings.WHITE, 16
         )
 
 class PauseMenu(BaseMenu):
@@ -286,11 +327,12 @@ class GameOverMenu(BaseMenu):
         ]
 
         for i, stat in enumerate(stats):
+            stat_width = len(stat) * 18 // 2  # Rough text width
+            stat_x = (self.screen_width // 2) - (stat_width // 2)
             arcade.draw_text(
                 stat,
-                self.screen_width // 2, stats_y - (i * 30),
-                settings.WHITE, 18,
-                anchor_x='center', anchor_y='center'
+                stat_x, stats_y - (i * 30),
+                settings.WHITE, 18
             )
 
 class SettingsMenu(BaseMenu):
@@ -303,7 +345,7 @@ class SettingsMenu(BaseMenu):
         self.debug_mode = settings.DEBUG_MODE
         self.show_fps = settings.SHOW_FPS
 
-        self.rebuuild_items()
+        self.rebuild_items()
 
     def rebuild_items(self):
         self.clear_items()
@@ -314,7 +356,7 @@ class SettingsMenu(BaseMenu):
         sound_text = f"Sound EFffects: {'ON' if self.sound_enabled else 'OFF'}"
         self.add_item(sound_text, 'toggle_sound')
 
-        debug_text = f"Debug Mode: {'ON' if self.sound_enabled else 'OFF'}"
+        debug_text = f"Debug Mode: {'ON' if self.debug_mode else 'OFF'}"
         self.add_item(debug_text, 'toggle_debug')
 
         fps_text = f"Show FPS: {'ON' if self.show_fps else 'OFF'}"
