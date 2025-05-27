@@ -147,3 +147,110 @@ class Animation:
     def add_completion_callback(self, callback: Callable):
         self.on_complete_callbacks.append(callback)
 
+class AnimationController:
+
+    def __init__(self, sprite: arcade.Sprite):
+        self.sprite = sprite
+        self.animations: Dict[str, Animation] = {}
+        self.current_animation_name = None
+        self.current_animation = None
+        self.previous_animation_name = None
+
+        self.transition_duration = 0.0
+        self.transition_time = 0.0
+        self.transitioning = False
+
+        self.state_history: List[Tuple[str, float]] = []
+        self.max_history = 10
+
+        self.mirrored = False
+        self.auto_mirror = True
+
+    def add_anmiation(self, animation: Animation):
+        self.animations[animation.name] = animation
+
+        if self.current_animation is None:
+            self.set_animation(animation.name)
+
+    def set_animation(self, animation_name: str, force_restart: bool = False) -> bool:
+        if animation_name not in self.animations:
+            if settings.DEBUG_MODE:
+                print(f"Animation '{animation_name}' not found")
+            return False
+        
+        if self.current_animation_name == animation_name and not force_restart:
+            return True
+        
+        self.previous_animation_name == self.current_animation_name
+
+        current_time = time.time()
+        self.state_history.append((animation_name, current_time))
+        if len(self.state_history) > self.max_history:
+            self.state_history.pop(0)
+
+        self.current_animation_name = animation_name
+        self.current_animation = self.animations[animation_name]
+
+        if force_restart or self.previous_animation_name != animation_name:
+            self.current_animation.restart()
+
+        self._update_sprite_texture()
+
+        return True
+    
+    def update(self, delta_time: float):
+        if not self.current_animation:
+            return
+        
+        if self.auto_mirror and hasattr(self.sprite, 'change_x'):
+            if self.sprite.change_x > 0:
+                self.mirrored = False
+            elif self.sprite.change_x < 0:
+                self.mirrored = True
+
+        frame_changed = self.current_animation.update(delta_time)
+
+        if frame_changed:
+            self._update_sprite_texture()
+
+    def _update_sprite_texture(self):
+        if not self.current_animation:
+            return
+        
+        texture = self.current_animation.get_current_texture()
+        if texture:
+            if self.mirrored:
+                texture = texture.texture.flip_horizontally()
+
+            self.sprite.texture = texture
+
+    def get_current_animation_name(self) -> Optional[str]:
+        return self.current_animation_name
+    
+    def is_animation_finished(self) -> bool:
+        return self.current_animation.is_finished if self.current_animation else True
+    
+    def pause_current_animation(self):
+        if self.current_animation:
+            self.current_animation.pause()
+
+    def resume_current_animation(self):
+        if self.current_animation:
+            self.current_animation.resume()
+
+    def set_mirrored(self, mirrored: bool):
+        if self.mirrored != mirrored:
+            self.mirrored = mirrored
+            self._update_sprite_texture()
+
+class Animationmanager:
+
+    def __init__(self, asset_loader=None):
+        self.asset_loader = asset_loader
+        self.controllers = Dict[arcade.Sprite, AnimationController] = {}
+
+        self.animation_definitions = self._create_animation_definitions()
+
+        self.global_effects: List[Callable] = []
+
+    
