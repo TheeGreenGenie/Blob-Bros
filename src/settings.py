@@ -119,3 +119,5 @@ GAME_STATES = {
     "GAME_OVER": 'game_over',
     "LEVEL_COMPLETE": 'level_complete'
 }
+
+ENABLE_SOUND = True

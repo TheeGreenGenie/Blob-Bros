@@ -348,7 +348,6 @@ class PlatformGame(arcade.Window):
         interactions = self.enemy_manager.check_player_interactions(self.player_sprite, self.physics_engine)
 
         for interaction in interactions:
-            print(f"Enemy Interaction: {interaction}") #Debug
             if interaction['type'] == 'stomp':
                 self.score += interaction['score']
                 print(f"Stomped {interaction['enemy_type']} {interaction['variant']} +{interaction['score']} points. Score: {self.score}")
@@ -443,13 +442,10 @@ class PlatformGame(arcade.Window):
         self.player_sprite.change_y = 0
 
     def on_key_press(self, key, modifiers):
-        #DEBUG CODE
-        print(f"Key pressed: {key}, Current state: {self.current_state}")  # Debug line
 
         #Handles key presses
         if self.current_state == settings.GAME_STATES['MENU']:
             action = self.menu_manager.handle_input(key)
-            print(f"Menu action: {action}")
             self._handle_menu_action(action)
         elif self.current_state == settings.GAME_STATES['PLAYING']:
             self.player_input.on_key_press(key, modifiers)

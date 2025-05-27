@@ -72,15 +72,10 @@ class BaseMenu:
                 item.selected = False
 
     def handle_input(self, key):
-        #DEBUG CODE
-        print(f"BaseMenu handle_input called with key: {key}") 
         if self.input_cooldown > 0:
-            print('Input on cooldown')
             return None
         
         if key == arcade.key.UP:
-            #DEBUG CODE
-            print('Up key detected')
             self.move_selection(-1)
             self.input_cooldown = self.input_delay
 
