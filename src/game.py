@@ -10,6 +10,9 @@ from enemies.enemy_base import EnemyManager, EnemyState
 from enemies.goomba import Goomba, create_goomba
 from ui.hud import HUD
 from ui.menu import MenuManager
+from utils.asset_loader import AssetLoader, get_asset_loader, load_game_assets
+from utils.sound_manager import SoundManager, get_sound_manager, initialize_sound_manager
+from utils.animation import AnimationManager, get_animation_manager, initiailize_animation_manager, setup_player_animations, setup_enemy_animations
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -34,6 +37,12 @@ class PlatformGame(arcade.Window):
         self.hud_manager = None
         self.menu_manager = None
 
+        self.asset_loader = None
+        self.sound_manager = None
+        self.animation_manager = None
+        self.assets_loaded = False
+        self.loading_error = None
+
         self.level_start_time = 0
         self.level_time = 0
 
@@ -56,7 +65,13 @@ class PlatformGame(arcade.Window):
 
     def setup(self):
         #Setup game and initialize starting vars, called after creating window
+        print("Starting game setup...")
 
+        success = self._initialize_asset_systems()
+        if not success:
+            print(f"Faield to load assets: {self.loading_error}")
+            return False
+        
         self.player_list = arcade.SpriteList()
         self.wall_list = arcade.SpriteList(use_spatial_hash=True)
         self.coin_manager = CoinManager()
@@ -68,6 +83,10 @@ class PlatformGame(arcade.Window):
         self.player_sprite = Player()
         self.player_sprite.setup(settings.PLAYER_START_X, settings.PLAYER_START_Y)
         self.player_list.append(self.player_sprite)
+
+        self.player_animation_controller = setup_player_animations(
+            self.player_sprite, self.animation_manager
+        )
 
         self.player_input = PlayerInputHandler(self.player_sprite)
 
@@ -88,8 +107,38 @@ class PlatformGame(arcade.Window):
         self.level_start_time = 0
         self.level_time = 0
 
-        print('Game setup complete!')
+        self.sound_manager.play_music('menu')
 
+        print('Game setup complete!')
+        return True
+    
+    def _initialize_asset_system(self):
+        try:
+            print("Loading game assets...")
+            self.asset_loader = get_asset_loader()
+            self.assets_loaded = self.asset_loader.load_all_assets()
+
+            if not self.assets_loaded:
+                self.loading_error = "Asset loading failed"
+                return False
+            
+            print("Initializing sound system...")
+            self.sound_manager = initialize_sound_manager(self.asset_loader)
+
+            print("Initializing animation system...")
+            self.animation_manager = initiailize_animation_manager(self.asset_loader)
+
+            if not self.asset_loader.validate_critical_assets():
+                self.loading_error = "Critical assets missing"
+                return False
+            
+            print("All asset sysems intialized successfully!")
+            return True
+        
+        except Exception as e:
+            self.loading_error = f"Asset system intializtion failed: {e}"
+            print(self.loading_error)
+            return False
 
     def create_test_level(self):
         #Simple test level with platforms & coins, will be replaced
@@ -311,6 +360,7 @@ class PlatformGame(arcade.Window):
         self.physics_engine.update()
         self.player_sprite.set_ground_state(self.physics_engine.can_jump())
         self.player_list.update()
+        self.animation_manager.update_all(delta_time)
 
         collection_info = self.coin_manager.update(delta_time, self.player_sprite)
         if collection_info:
@@ -341,8 +391,7 @@ class PlatformGame(arcade.Window):
             self.score += collection_info['value']
             print(f"Collected {collection_info['coin_type']} coin! +{collection_info['value']} points. Score: {self.score}")
 
-            #Play sound when we load it
-            # self.sound_manage.play_sound("collection_info['sound']")
+            self.sound_manager.play_sound('coin')
 
     def check_enemy_interactions(self):
         interactions = self.enemy_manager.check_player_interactions(self.player_sprite, self.physics_engine)
@@ -356,8 +405,7 @@ class PlatformGame(arcade.Window):
                     bounce_height = interaction.get('bounce_height', 8)
                     self.player_sprite.change_y = bounce_height
 
-                # Play sound effect when we add sounds
-                # self.sound_manager.play_sound(interaction['sound'])
+                self.sound_manager.play_sound('stomp')
 
             elif interaction['type'] == 'damage':
                 if not settings.INVINCIBLE_MODE:
@@ -379,8 +427,7 @@ class PlatformGame(arcade.Window):
                         if interaction.get('knockback'):
                             self.player_sprite.change_x = 3 if self.player_sprite.change_x >= 0 else -3
 
-                    # Play sound effect when we add sounds
-                    # self.sound_manager.play_sound(interaction['sound'])
+                    self.sound_manager.play_sound('death')
 
     def update_camera(self):
         #update camera to follow player
@@ -465,25 +512,35 @@ class PlatformGame(arcade.Window):
     def _handle_menu_action(self, action):
         if action == 'start_game':
             self._start_new_game()
+            self.sound_manager.play_sound('menu_select')
         elif action == 'settings':  # Add this
             self.menu_manager.show_menu('settings')
+            self.sound_manager.play_sound('menu_select')
         elif action == 'high_scores':  # Add this
             self._show_high_scores()
+            self.sound_manager.play_sound('menu_select')
         elif action == 'credits':  # Add this
             self._show_credits()
+            self.sound_manager.play_sound('menu_select')
         elif action == 'resume':
             self.current_state = settings.GAME_STATES['PLAYING']
+            self.sound_manager.resume_music()
         elif action == 'restart_level':
             self._restart_game()
+            self.sound_manager.play_sound('menu_select')
         elif action == 'play_again':
             self._start_new_game()
+            self.sound_manager.play_sound('menu_select')
         elif action == 'restart':
             self._restart_game()
+            self.sound_manager.play_sound('menu_select')
         elif action == 'main_menu':
             self.current_state = settings.GAME_STATES["MENU"]
             self.menu_manager.show_menu('main', push_current=False)
+            self.sound_manager.play_sound('menu_select')
         elif action == 'quit':
             self.close()
+            
 
     def _show_high_scores(self):
         print("High scores feature not yer implemented")
@@ -511,6 +568,7 @@ class PlatformGame(arcade.Window):
         )
 
         self.current_state = settings.GAME_STATES['PLAYING']
+        self.sound_manager.play_music('overworld')
 
     def _restart_game(self):
         self.level_time = 0
