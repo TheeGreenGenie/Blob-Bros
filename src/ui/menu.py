@@ -374,7 +374,54 @@ class SettingsMenu(BaseMenu):
 
 class LevelCompleteMenu(BaseMenu):
 
-    def __init__(self)
+    def __init__(self, screen_width, screen_height):
+        super().__init__(screen_width, screen_height, "LEVEL COMPLETE!")
+
+        self.level_name = '1-1'
+        self.final_score = 0
+        self.coins_collected = 0
+        self.enemies_defeated = 0
+
+        self.add_item('NEXT LEVEL', 'next_level')
+        self.add_item('MAIN MENU', 'main_menu')
+        self.add_item('QUIT', 'quit')
+
+        self.background_color = (0, 100, 0)  # Green background
+        self.title_color = (255, 255, 0)   
+
+    def set_level_stats(self, level_name, score, coins, enemies):
+        self.level_name = level_name
+        self.final_score = score
+        self.coins_collected = coins
+        self.enemies_defeated = enemies
+
+    def draw(self):
+        super().draw()
+
+        congrats_text = f"CONGRATULATIONS! YOU BEAT {self.level_name}!"
+        text_width = len(congrats_text) * 20 // 2
+        congrats_x = (self.screen_width // 2) - (text_width // 2)
+        arcade.draw_text(
+            congrats_text,
+            congrats_x, self.screen_height - 200,
+            self.title_color, 20
+        )
+
+        stats_y = self.screen_height // 2 + 150
+        stats = [
+            f'Final Score: {self.final_score:06d}',
+            f'Coins Collected: {self.coins_collected}',
+            f'Enemies Defeated: {self.enemies_defeated}'
+        ]
+
+        for i, stat in enumerate(stats):
+            stat_width = len(stat) * 16 // 2
+            stat_x = (self.screen_width // 2) - (stat_width // 2)
+            arcade.draw_text(
+                stat,
+                stat_x, stats_y - (i*25),
+                settings.WHITE, 16
+            )
 
 class MenuManager:
 
@@ -386,6 +433,7 @@ class MenuManager:
         self.pause_menu = PauseMenu(screen_width, screen_height)
         self.game_over_menu = GameOverMenu(screen_width, screen_height)
         self.settings_menu = SettingsMenu(screen_width, screen_height)
+        self.level_complete_menu = LevelCompleteMenu(screen_width, screen_height)
 
         self.menu_stack = []
         self.current_menu = self.main_menu
@@ -406,6 +454,12 @@ class MenuManager:
             self.current_menu = self.game_over_menu
         elif menu_name == 'settings':
             self.current_menu = self.settings_menu
+        elif menu_name == 'level_complete':
+            self.current_menu = self.level_complete_menu
+            print(f"Set current menu to level_complete: {self.current_menu}")
+
+    def set_level_complete_stats(self, level_name, score, coins, enemies):
+        self.level_complete_menu.set_level_stats(level_name, score, coins, enemies)
 
     def go_back(self):
         if self.menu_stack:

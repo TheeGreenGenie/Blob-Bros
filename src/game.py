@@ -282,7 +282,7 @@ class PlatformGame(arcade.Window):
 
         if self.current_state == settings.GAME_STATES['MENU']:
             self.menu_manager.draw()
-        elif self.current_state in [settings.GAME_STATES['PLAYING'], settings.GAME_STATES['PAUSED'], settings.GAME_STATES['GAME_OVER']]:
+        elif self.current_state in [settings.GAME_STATES['PLAYING'], settings.GAME_STATES['PAUSED'], settings.GAME_STATES['GAME_OVER'], settings.GAME_STATES['LEVEL_COMPLETE']]:
             self._draw_game_world()
             self.hud_manager.draw()
 
@@ -290,30 +290,33 @@ class PlatformGame(arcade.Window):
                 self.menu_manager.draw()
             elif self.current_state == settings.GAME_STATES['GAME_OVER']:
                 self.menu_manager.draw()
+            elif self.current_state == settings.GAME_STATES['LEVEL_COMPLETE']:
+                self.menu_manager.draw()
 
     def _draw_game_world(self):
-        self.gui_camera.use()
+        if self.current_state == settings.GAME_STATES['PLAYING']:
+            self.gui_camera.use()
 
-        if hasattr(self, 'asset_loader') and self.asset_loader:
-            sky_texture = self.asset_loader.get_texture('sky')
-            if sky_texture:
-                arcade.draw_texture_rect(
-                    sky_texture,
-                    arcade.XYWH(
-                        settings.SCREEN_WIDTH // 2,
-                        settings.SCREEN_HEIGHT // 2,
-                        settings.SCREEN_WIDTH,
-                        settings.SCREEN_HEIGHT
+            if hasattr(self, 'asset_loader') and self.asset_loader:
+                sky_texture = self.asset_loader.get_texture('sky')
+                if sky_texture:
+                    arcade.draw_texture_rect(
+                        sky_texture,
+                        arcade.XYWH(
+                            settings.SCREEN_WIDTH // 2,
+                            settings.SCREEN_HEIGHT // 2,
+                            settings.SCREEN_WIDTH,
+                            settings.SCREEN_HEIGHT
+                        )
                     )
-                )
 
-        self.camera.use()
-        self.wall_list.draw()
-        self.coin_manager.coin_list.draw()
-        self.enemy_manager.enemy_list.draw()
-        self.player_list.draw()
+            self.camera.use()
+            self.wall_list.draw()
+            self.coin_manager.coin_list.draw()
+            self.enemy_manager.enemy_list.draw()
+            self.player_list.draw()
 
-        self.gui_camera.use()
+            self.gui_camera.use()
 
     def draw_ui(self):
         #Draw ui like score & lives
@@ -401,6 +404,8 @@ class PlatformGame(arcade.Window):
         elif self.current_state == settings.GAME_STATES['PAUSED']:
             self.menu_manager.update(delta_time)
         elif self.current_state == settings.GAME_STATES['GAME_OVER']:
+            self.menu_manager.update(delta_time)
+        elif self.current_state == settings.GAME_STATES['LEVEL_COMPLETE']:
             self.menu_manager.update(delta_time)
 
     def _update_gameplay(self, delta_time):
@@ -555,7 +560,18 @@ class PlatformGame(arcade.Window):
 
         if self.enemy_manager.defeated_enemies >= self.enemy_manager.total_enemies:
             print("All enemies defeated! Victory!")
+            print(f"Changing state to: {settings.GAME_STATES['LEVEL_COMPLETE']}")
             self.current_state = settings.GAME_STATES["LEVEL_COMPLETE"]
+            
+            # Set level complete stats
+            self.menu_manager.set_level_complete_stats(
+                '1-1',
+                self.score,
+                self.coin_manager.collected_coins,
+                self.enemy_manager.defeated_enemies
+            )
+            self.menu_manager.show_menu('level_complete', push_current=False)
+            print("Level complete menu should now be active")
 
     def player_die(self):
         self.lives -= 1
@@ -599,6 +615,9 @@ class PlatformGame(arcade.Window):
         elif self.current_state == settings.GAME_STATES['GAME_OVER']:
             action = self.menu_manager.handle_input(key)
             self._handle_menu_action(action)
+        elif self.current_state == settings.GAME_STATES['LEVEL_COMPLETE']:
+            action = self.menu_manager.handle_input(key)
+            self._handle_menu_action(action)
 
     def _handle_menu_action(self, action):
         if action == 'start_game':
@@ -628,6 +647,10 @@ class PlatformGame(arcade.Window):
         elif action == 'main_menu':
             self.current_state = settings.GAME_STATES["MENU"]
             self.menu_manager.show_menu('main', push_current=False)
+            self.sound_manager.play_sound('menu_select')
+        elif action == 'next_level':
+            print('Next level not implemented yet')
+            self._start_new_game()
             self.sound_manager.play_sound('menu_select')
         elif action == 'quit':
             self.close()
