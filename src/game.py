@@ -13,6 +13,7 @@ from ui.menu import MenuManager
 from utils.asset_loader import AssetLoader, get_asset_loader, load_game_assets
 from utils.sound_manager import SoundManager, get_sound_manager, initialize_sound_manager
 from utils.animation import AnimationManager, get_animation_manager, initialize_animation_manager, setup_player_animations, setup_enemy_animations
+from tilemap import load_level
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -99,7 +100,10 @@ class PlatformGame(arcade.Window):
 
         self.player_input = PlayerInputHandler(self.player_sprite)
 
-        self.create_test_level()
+        try:
+            self.load_level_from_file('')
+        except:
+            self.create_test_level()
 
         self.physics_engine = PlatformPhysicsEngine(
             self.player_sprite,
@@ -154,6 +158,56 @@ class PlatformGame(arcade.Window):
         except Exception as e:
             self.loading_error = f"Asset system intializtion failed: {e}"
             print(self.loading_error)
+            return False
+
+    def load_level_from_file(self, level_filename):
+        level_path = os.path.join("levels", level_filename)
+        self.current_level = load_level(level_path)
+        
+        if self.current_level:
+            # Clear existing sprites
+            self.wall_list.clear()
+            self.coin_manager.reset()
+            self.enemy_manager.reset()
+            
+            # Get the wall list from the tilemap
+            self.wall_list = self.current_level.wall_list
+            
+            # Spawn enemies from the level data
+            self.current_level.spawn_enemies(self.enemy_manager)
+            
+            # Spawn coins from the level data
+            self.current_level.spawn_coins(self.coin_manager)
+            
+            # Set player starting position
+            if self.current_level.player_spawn:
+                self.player_sprite.center_x = self.current_level.player_spawn[0]
+                self.player_sprite.center_y = self.current_level.player_spawn[1]
+            
+            # Set level properties
+            if hasattr(self.current_level, 'background_color'):
+                arcade.set_background_color(self.current_level.background_color)
+            
+            if hasattr(self.current_level, 'background_music') and self.sound_manager:
+                self.sound_manager.play_music(self.current_level.background_music)
+            
+            if hasattr(self.current_level, 'time_limit'):
+                self.level_time_limit = self.current_level.time_limit
+            
+            # Recreate physics engine with new walls
+            self.physics_engine = PlatformPhysicsEngine(
+                self.player_sprite,
+                self.wall_list,
+                gravity=settings.GRAVITY,
+                interactive_tiles=self.current_level.interactive_list
+            )
+            
+            print(f"Level '{self.current_level.name}' loaded successfully!")
+            return True
+        else:
+            print(f"Failed to load level: {level_filename}")
+            # Fall back to test level
+            self.create_test_level()
             return False
 
     def create_test_level(self):

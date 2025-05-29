@@ -116,7 +116,82 @@ class TileMap:
         grid_y = int(pixel_y // self.tile_size)
         return grid_x, grid_y
     
+    def draw_with_layers(self):
+        # If we have an arcade tilemap, use its draw method
+        if hasattr(self, 'arcade_tilemap') and self.arcade_tilemap:
+            self.arcade_tilemap.draw()
+        else:
+            # Fall back to our standard drawing
+            self.draw()
+
+    def get_sprite_at_position(self, x, y, layer_name="Terrain"):
+        if hasattr(self, 'arcade_tilemap') and self.arcade_tilemap:
+            if layer_name in self.arcade_tilemap.sprite_lists:
+                sprite_list = self.arcade_tilemap.sprite_lists[layer_name]
+                # Check for collision at point
+                sprites = arcade.get_sprites_at_point((x, y), sprite_list)
+                return sprites[0] if sprites else None
+        return None
+
+    def get_tile_properties(self, x, y):
+        sprite = self.get_sprite_at_position(
+            x * self.tile_size + self.tile_size // 2,
+            y * self.tile_size + self.tile_size // 2
+        )
+        if sprite and hasattr(sprite, 'properties'):
+            return sprite.properties
+        return {}
+
+    def spawn_enemies(self, enemy_manager):
+        from enemies.goomba import create_goomba
+        
+        for spawn_data in self.enemy_spawns:
+            x = spawn_data['x']
+            y = spawn_data['y']
+            enemy_type = spawn_data.get('type', 'goomba')
+            variant = spawn_data.get('variant', 'normal')
+            
+            # Create the appropriate enemy type
+            if enemy_type == 'goomba':
+                enemy = create_goomba(x, y, variant)
+                enemy_manager.enemy_list.append(enemy)
+                enemy_manager.total_enemies += 1
+            # Add more enemy types as needed
+            
+    def spawn_coins(self, coin_manager):
+        if hasattr(self, 'arcade_tilemap') and self.arcade_tilemap:
+            if "Collectibles" in self.arcade_tilemap.sprite_lists:
+                # Remove the arcade sprites and replace with our Coin objects
+                collectibles = self.arcade_tilemap.sprite_lists["Collectibles"]
+                for sprite in collectibles:
+                    if hasattr(sprite, 'properties') and sprite.properties.get('type') == 'coin':
+                        # Determine coin type from properties or default
+                        coin_type = sprite.properties.get('coin_type', 'normal')
+                        coin_manager.add_coin(sprite.center_x, sprite.center_y, coin_type)
+                
+                # Clear the arcade sprite list since we're using our own coins
+                collectibles.clear()
+
+    def process_interactive_blocks(self):
+        if hasattr(self, 'arcade_tilemap') and self.arcade_tilemap:
+            for layer_name, sprite_list in self.arcade_tilemap.sprite_lists.items():
+                for sprite in sprite_list:
+                    if hasattr(sprite, 'properties'):
+                        # Check if it's a question block
+                        if sprite.properties.get('type') == 'question_block':
+                            # Add our custom collision handling
+                            sprite.contents = sprite.properties.get('contents', 'coin')
+                            sprite.activated = False
+                        
+                        # Check if it's a brick block
+                        elif sprite.properties.get('type') == 'brick':
+                            sprite.breakable = sprite.properties.get('breakable', True)
+
     def create_sprites(self):
+        if hasattr(self, 'arcade_tilemap') and self.arcade_tilemap:
+            print("Skipping sprite creation - using TMX sprite data")
+            return
+
         self.wall_list.clear()
         self.background_list.clear()
         self.interactive_list.clear()
@@ -147,9 +222,16 @@ class TileMap:
                 elif tile_type == TileType.LEVEL_END:
                     self.level_end = (pixel_x, pixel_y)
     def draw(self):
-        self.background_list.draw()
-        self.wall_list.draw()
-        self.interactive_list.draw()
+        if hasattr(self, 'arcade_tilemap') and self.arcade_tilemap:
+            # Use arcade's optimized drawing
+            self.arcade_tilemap.draw()
+        else:
+            # Use original drawing method
+            self.background_list.draw()
+            self.wall_list.draw()
+            self.interactive_list.draw()
+
+    
 
 class TileMapLoader:
     
@@ -188,10 +270,117 @@ class TileMapLoader:
         
     @staticmethod
     def load_from_tiled_tmx(filename):
-        #Update if arcade's tmx loader is not working
-        print(f"For TMX files, use arcade.load_tilemap('{filename}') directly")
-        return None
-    
+        try:
+            # Use arcade's built-in TMX loader
+            # scaling factor for the tiles
+            scaling = settings.TILE_SCALING
+            
+            # Load the tile map using arcade
+            arcade_tilemap = arcade.load_tilemap(
+                filename, 
+                scaling=scaling,
+                use_spatial_hash=True  # Optimize collision detection
+            )
+            
+            # Get map dimensions from the arcade tilemap
+            # Note: arcade_tilemap.width/height are in pixels, we need tile count
+            map_width_pixels = arcade_tilemap.map_size.width
+            map_height_pixels = arcade_tilemap.map_size.height
+            tile_width = arcade_tilemap.tile_size.width * scaling
+            tile_height = arcade_tilemap.tile_size.height * scaling
+            
+            # Calculate grid dimensions
+            width = int(map_width_pixels / tile_width)
+            height = int(map_height_pixels / tile_height)
+            
+            # Create our TileMap object
+            tilemap = TileMap(width, height, int(tile_width))
+            tilemap.name = os.path.basename(filename).replace('.tmx', '')
+            
+            # Clear default sprite lists
+            tilemap.wall_list.clear()
+            tilemap.background_list.clear()
+            tilemap.interactive_list.clear()
+            
+            # Process sprite lists from arcade's tilemap
+            # Arcade creates sprite lists based on layer names
+            for layer_name, sprite_list in arcade_tilemap.sprite_lists.items():
+                if layer_name.lower() == "terrain":
+                    # Add all terrain sprites to wall list
+                    for sprite in sprite_list:
+                        tilemap.wall_list.append(sprite)
+                        
+                elif layer_name.lower() == "collectibles":
+                    # Process collectibles - they go to interactive list
+                    for sprite in sprite_list:
+                        # Check if it's a coin based on properties or texture
+                        if hasattr(sprite, 'properties'):
+                            if sprite.properties.get('type') == 'coin' or sprite.properties.get('collectible'):
+                                tilemap.interactive_list.append(sprite)
+                                
+                elif layer_name.lower() == "background":
+                    # Add background decorations
+                    for sprite in sprite_list:
+                        tilemap.background_list.append(sprite)
+            
+            # Process object layers for spawn points and special objects
+            if hasattr(arcade_tilemap, 'object_lists'):
+                for object_layer in arcade_tilemap.object_lists:
+                    for tmx_object in object_layer:
+                        # Get object position
+                        obj_x = tmx_object.location.x * scaling
+                        obj_y = tmx_object.location.y * scaling
+                        
+                        # Handle different object types
+                        if tmx_object.name == "player_spawn":
+                            tilemap.player_spawn = (obj_x, obj_y)
+                            
+                        elif "spawn" in tmx_object.name and tmx_object.properties.get('spawn_type') == 'enemy':
+                            # Create enemy spawn data
+                            enemy_spawn = {
+                                'x': obj_x,
+                                'y': obj_y,
+                                'type': tmx_object.properties.get('enemy_type', 'goomba'),
+                                'variant': tmx_object.properties.get('variant', 'normal')
+                            }
+                            tilemap.enemy_spawns.append(enemy_spawn)
+                            
+                        elif tmx_object.name == "level_end":
+                            tilemap.level_end = (obj_x, obj_y)
+                            # Store next level info if available
+                            if 'next_level' in tmx_object.properties:
+                                tilemap.next_level = tmx_object.properties['next_level']
+            
+            # Process map properties
+            if hasattr(arcade_tilemap, 'properties') and arcade_tilemap.properties:
+                # Background color
+                if 'background_color' in arcade_tilemap.properties:
+                    hex_color = arcade_tilemap.properties['background_color'].lstrip('#')
+                    tilemap.background_color = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+                
+                # Music track
+                if 'music' in arcade_tilemap.properties:
+                    tilemap.background_music = arcade_tilemap.properties['music']
+                
+                # Time limit
+                if 'time_limit' in arcade_tilemap.properties:
+                    tilemap.time_limit = int(arcade_tilemap.properties['time_limit'])
+            
+            # Store the arcade tilemap reference for additional features
+            tilemap.arcade_tilemap = arcade_tilemap
+            
+            print(f"Successfully loaded TMX level: {tilemap.name}")
+            print(f"Map size: {width}x{height} tiles")
+            print(f"Found {len(tilemap.wall_list)} wall sprites")
+            print(f"Found {len(tilemap.interactive_list)} interactive sprites")
+            print(f"Found {len(tilemap.enemy_spawns)} enemy spawns")
+            
+            return tilemap
+            
+        except Exception as e:
+            print(f"Error loading TMX file {filename}: {e}")
+            import traceback
+        
     @staticmethod
     def create_test_level():
         #level to text functionality
