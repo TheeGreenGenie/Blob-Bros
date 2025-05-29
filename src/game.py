@@ -100,10 +100,7 @@ class PlatformGame(arcade.Window):
 
         self.player_input = PlayerInputHandler(self.player_sprite)
 
-        try:
-            self.load_level_from_file('')
-        except:
-            self.create_test_level()
+        self.create_test_level()
 
         self.physics_engine = PlatformPhysicsEngine(
             self.player_sprite,
