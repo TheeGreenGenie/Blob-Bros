@@ -553,6 +553,10 @@ class PlatformGame(arcade.Window):
             self.level_complete = True
             #Maybe add something here after completion? - come back later
 
+        if self.enemy_manager.defeated_enemies >= self.enemy_manager.total_enemies:
+            print("All enemies defeated! Victory!")
+            self.current_state = settings.GAME_STATES["LEVEL_COMPLETE"]
+
     def player_die(self):
         self.lives -= 1
 

@@ -372,6 +372,10 @@ class SettingsMenu(BaseMenu):
             settings.SHOW_FPS = self.show_fps
         self.rebuild_items()
 
+class LevelCompleteMenu(BaseMenu):
+
+    def __init__(self)
+
 class MenuManager:
 
     def __init__(self, screen_width, screen_height):

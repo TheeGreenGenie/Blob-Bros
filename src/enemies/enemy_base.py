@@ -57,6 +57,7 @@ class BaseEnemy(arcade.Sprite):
         self.stomp_kills = True
         self.invulnerable = False
         self.invulnerable_timer = 0
+        self.defeated = False
 
         self.animation_timer = 0
         self.walk_animation_speed = 0.2
@@ -239,7 +240,7 @@ class BaseEnemy(arcade.Sprite):
         self.set_state(EnemyState.DYING)
 
         self.change_x = 0
-
+        self.defeated = True
         #Play death sound wehn added
         #sound_manager.play_sound("enemy_death")
 
@@ -302,6 +303,14 @@ class EnemyManager:
     
     def update(self, delta_time, player_sprite=None):
         for enemy in self.enemy_list:
+
+            if enemy.center_y < -100 and enemy.state not in [EnemyState.DEAD, EnemyState.DYING]:
+                enemy.die()
+                if not hasattr(enemy, '_counted_as_defeated'):
+                    self.defeated_enemies += 1
+                    enemy._counted_as_defeated = True
+                    print(f"Enemy fell off map! Defeated: {self.defeated_enemies}")
+
             if player_sprite and enemy.state != EnemyState.DEAD:
                 if enemy.detect_player(player_sprite):
                     if enemy.state == EnemyState.WALKING:
