@@ -4,6 +4,7 @@ import math
 import time
 import sys
 import os
+from utils.asset_loader import get_asset_loader
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -183,6 +184,13 @@ class CoinManager:
     def add_coin(self, x, y, coin_type='normal', value=None):
         coin = Coin(coin_type, value)
         coin.setup_position(x, y)
+
+        asset_loader = get_asset_loader()
+        if asset_loader:
+            texture = asset_loader.get_coin_texture(coin_type)
+            if texture:
+                coin.texture = texture
+
         self.coin_list.append(coin)
         self.total_coins += 1
         self.total_value += coin.value

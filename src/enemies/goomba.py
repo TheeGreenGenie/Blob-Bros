@@ -3,6 +3,7 @@ import arcade
 import math
 import random
 from .enemy_base import BaseEnemy, EnemyState
+from utils.asset_loader import get_asset_loader
 import sys
 import os
 
@@ -63,6 +64,14 @@ class Goomba(BaseEnemy):
         self.max_health = self.health
 
     def _create_goomba_texture(self):
+        asset_loader = get_asset_loader()
+
+        if asset_loader:
+            texture = asset_loader.get_goomba_texture(self.variant)
+            if texture:
+                self.texture = texture
+                return
+            
         variant_colors  = {  #         Brown, saddle brown, dark brown, & indigo
             'normal': (139, 69, 19),
             'fast': (160, 82, 45),
@@ -70,8 +79,7 @@ class Goomba(BaseEnemy):
             'elite': (75, 0, 130)
         }
 
-        color = variant_colors.get(self.variant, variant_colors["normal"])
-        
+        color = variant_colors.get(self.variant, variant_colors["normal"])        
         # Size based on variant
         size = 28 if self.variant != "large" else 36
         

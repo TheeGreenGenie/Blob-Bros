@@ -220,8 +220,12 @@ class AnimationController:
         texture = self.current_animation.get_current_texture()
         if texture:
             if self.mirrored:
-                texture = texture.texture.flip_horizontally()
-
+                try:
+                    flipped_texture = texture.flip_horizontally()
+                    self.sprite.texture = flipped_texture
+                except AttributeError:
+                    self.sprite.texture = texture
+        else:
             self.sprite.texture = texture
 
     def get_current_animation_name(self) -> Optional[str]:
@@ -247,7 +251,7 @@ class AnimationManager:
 
     def __init__(self, asset_loader=None):
         self.asset_loader = asset_loader
-        self.controllers = Dict[arcade.Sprite, AnimationController] = {}
+        self.controllers: Dict[arcade.Sprite, AnimationController] = {}
 
         self.animation_definitions = self._create_animation_definitions()
 
@@ -261,7 +265,7 @@ class AnimationManager:
         self.controllers[sprite] = controller
 
         if animation_set and animation_set in self.animation_definitions:
-            self._load_animation_set(controller, animation_set)
+            self._load_animations_set(controller, animation_set)
 
         return controller
     
@@ -422,7 +426,7 @@ def get_animation_manager() -> AnimationManager:
         _animation_manager = AnimationManager()
     return _animation_manager
 
-def initiailize_animation_manager(asset_loader) -> AnimationManager:
+def initialize_animation_manager(asset_loader) -> AnimationManager:
     manager = get_animation_manager()
     manager.set_asset_loader(asset_loader)
     return manager

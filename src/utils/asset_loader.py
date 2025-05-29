@@ -4,6 +4,8 @@ from PIL import Image
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import sys
+import io
+import time
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -13,7 +15,7 @@ import settings
 class AssetLoader:
 
     def __init__(self):
-        self.base_path = Path(__file__).parent.parent
+        self.base_path = Path(__file__).parent.parent.parent
         self.assets_path = self.base_path / 'assets'
 
         self.textures: Dict[str, arcade.Texture] = {}
@@ -43,12 +45,19 @@ class AssetLoader:
         print("Loading game assets...")
 
         try:
+            print("Loading player assets...")
             self._load_player_assets()
+            print("Creating player animations...")
             self._create_player_animations()
+            print("Loading enemy assets...")
             self._load_enemy_assets()
+            print("Loading tile assets...")
             self._load_tile_assets()
+            print("Loading UI assets...")
             self._load_ui_assets()
+            print("Loading sound assets...")
             self._load_sound_assets()
+            print("Loading background assets...")
             self._load_background_assets()
 
             self.loaded = True
@@ -75,8 +84,8 @@ class AssetLoader:
             'player_walk_2': 'mario_walk2.png',
             'player_jump': 'mario_jump.png',
             'player_crouch': 'mario_crouch.png',
-            'player_small': 'mario_small.png',
-            'player_big': 'mario_big.png',
+            'player_small': 'mario_idle.png',
+            'player_big': 'mario_idle.png',
             'player_fire': 'mario_fire.png'
         }
 
@@ -88,8 +97,6 @@ class AssetLoader:
                 color=(255, 0, 0)
             )
             self.textures[name] = texture
-
-        self._create_player_animations()
 
     def _create_player_animations(self):
         walk_frames = [
@@ -122,7 +129,7 @@ class AssetLoader:
             self.textures[name] = texture
 
         koopa_assets = {
-            'koopa_green': ('koopa_green.png', (0, 255, 0)),
+            'koopa_grey': ('koopa_grey.png', (0, 255, 0)),
             'koopa_red': ('koopa_red.png', (255, 0, 0)),
             'koopa_shell': ('koopa_shell.png', (0, 100, 0))
         }
@@ -190,8 +197,8 @@ class AssetLoader:
         bg_assets = {
             'sky': ('sky.png', settings.SKY_BLUE),
             'clouds': ('clouds.png', settings.WHITE),
-            'mountains': ('mountains.png', (100, 150, 100)),
-            'castle_bg': ('castle_background.png', (64, 64, 64))
+            'hills': ('hills.png', (100, 150, 100)),
+            'mushroom': ('mushroom.png', (64, 64, 64))
         }
 
         for name, (filename, fallback_color) in bg_assets.items():
@@ -212,13 +219,13 @@ class AssetLoader:
         music_path = self.paths['music']
 
         sound_effects = [
-            'jump.wav', 'coin.wav', 'powerup.wav', 'stomp.wav',
-            'death.wav', 'level_complete.wav', 'pause.wav',
-            'menu_select.wav', 'menu_move.wav'
+            'jump.ogg', 'coin.ogg', 'powerup.ogg', 'stomp.ogg',
+            'death.ogg', 'level_complete.ogg', 'pause.ogg',
+            'menu_select.ogg', 'menu_move.ogg'
         ]
 
         for sound_file in sound_effects:
-            sound_name = sound_file.replace('.wav', '')
+            sound_name = sound_file.replace('.ogg', '')
             try:
                 if (sound_path / sound_file).exists():
                     self.sounds[sound_name] = arcade.load_sound(sound_path / sound_file)
@@ -248,8 +255,16 @@ class AssetLoader:
 
     def _load_texture_with_fallback(self, filepath: Path, name: str, size: Tuple[int, int], color: Tuple[int, int, int]) -> arcade.Texture:
         try:
+            #DEBUGGING
+            print(f"Attempting to load: {filepath}")
+            print(f"File exists: {filepath.exists()}")
+
             if filepath.exists():
+                #DEBUGGING
+                print(f"Loading real asset: {filepath}")
                 original_texture = arcade.load_texture(str(filepath))
+                #DEBUGGING
+                print(f"Successfully loaded {filepath}, size: {original_texture.width}x{original_texture.height}")
 
                 if (original_texture.width, original_texture.height) != size:
                     if settings.DEBUG_MODE:
@@ -260,8 +275,12 @@ class AssetLoader:
                 else:
                     return original_texture
             else:
+                #DEBUGGING
+                print(f"File not found, creating placeholder: {filepath}")
                 return self._create_colored_texture(name, size, color)
         except Exception as e:
+            #DEBUGGING
+            print(f"Error loading {filepath}: {e}")
             self.loading_errors.append(f'Failed to load {filepath}: {e}')
             return self._create_colored_texture(name, size, color)
         
@@ -277,7 +296,8 @@ class AssetLoader:
 
             resized_image = pil_image.resize(target_size, resample_method)
 
-            return arcade.Texture(name, resized_image)
+            resized_texture = arcade.Texture(resized_image)
+            return resized_texture
 
         except Exception as e:
             print(f"Failed to resize texture {name}: {e}")
@@ -286,9 +306,11 @@ class AssetLoader:
 
     def _create_colored_texture(self, name: str, size: Tuple[int, int], color: Tuple[int, int, int]) -> arcade.Texture:
         try:
-            image = Image.new('RGBA', size, color + (255,))   # alpha channel
-            texture = arcade.Texture.create_empty(name, size)
-            return arcade.Texture(name, image)
+            image = Image.new('RGBA', size, color + (255,))
+
+            texture = arcade.Texture(image)
+            return texture
+
         except Exception as e:
             print(f"Failed to create colored texture {name}: {e}")
             return arcade.Texture.create_empty(name, size)
@@ -389,7 +411,7 @@ class AssetLoader:
     
     def validate_critical_assets(self):
         critical_assets = {
-            'player_idle', 'goomba_normal', 'coin_normal', 'ground'
+            'player_idle', 'goomba_normal', 'coin_normal'
         }
         critical_tile_assets = {'ground'}
 

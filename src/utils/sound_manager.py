@@ -77,11 +77,13 @@ class SoundManager:
         print("SoundManager initialized")
 
     def set_asset_loader(self, asset_loader):
-        if not self.asset_loader:
+        if asset_loader is None:
+            print('Error: asset_loader is None')
             return False
 
         self.asset_loader = asset_loader
         print("SoundManager connected to AssetLoader")
+        return True
 
     def play_sound(self, sound_name: str, volume_override: Optional[float] = None, force_play: bool = False) -> bool:
         if not self.sound_enabled or not self.asset_loader:
@@ -282,5 +284,10 @@ def toggle_sound() -> bool:
 
 def initialize_sound_manager(asset_loader):
     sound_manager = get_sound_manager()
-    sound_manager.set_asset_loader(asset_loader)
+    success = sound_manager.set_asset_loader(asset_loader)
+    if success:
+        print("Sound manager successfully connected to asset loader")
+    else:
+        print("Failed to connect sound manager to asset loader")
+
     return sound_manager

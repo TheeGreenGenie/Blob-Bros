@@ -1,7 +1,7 @@
 #Player module, handles sprites, movements, physics, & abilities
-
 import arcade
 import settings
+from utils.asset_loader import get_asset_loader
 
 class Player(arcade.Sprite):
 
@@ -36,6 +36,13 @@ class Player(arcade.Sprite):
         #set player at starting pos
         self.center_x = start_x
         self.center_y = start_y
+
+        asset_loader = get_asset_loader()
+        if asset_loader:
+            texture = asset_loader.get_texture('player_idle')
+            if texture:
+                self.texture = texture
+
         self.change_x = 0
         self.change_y = 0
 

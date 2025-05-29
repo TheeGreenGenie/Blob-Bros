@@ -12,7 +12,7 @@ from ui.hud import HUD
 from ui.menu import MenuManager
 from utils.asset_loader import AssetLoader, get_asset_loader, load_game_assets
 from utils.sound_manager import SoundManager, get_sound_manager, initialize_sound_manager
-from utils.animation import AnimationManager, get_animation_manager, initiailize_animation_manager, setup_player_animations, setup_enemy_animations
+from utils.animation import AnimationManager, get_animation_manager, initialize_animation_manager, setup_player_animations, setup_enemy_animations
 
 class PlatformGame(arcade.Window):
     #Main game class managing window, game loop, & game state
@@ -67,10 +67,10 @@ class PlatformGame(arcade.Window):
         #Setup game and initialize starting vars, called after creating window
         print("Starting game setup...")
 
-        success = self._initialize_asset_systems()
+        success = self._initialize_asset_system()
         if not success:
-            print(f"Faield to load assets: {self.loading_error}")
-            return False
+            print(f"Asset loading issues: {self.loading_error}")
+            print("Continuing with available assets")
         
         self.player_list = arcade.SpriteList()
         self.wall_list = arcade.SpriteList(use_spatial_hash=True)
@@ -84,9 +84,18 @@ class PlatformGame(arcade.Window):
         self.player_sprite.setup(settings.PLAYER_START_X, settings.PLAYER_START_Y)
         self.player_list.append(self.player_sprite)
 
-        self.player_animation_controller = setup_player_animations(
-            self.player_sprite, self.animation_manager
-        )
+        if self.animation_manager:
+            try:
+                self.player_animation_controller = setup_player_animations(
+                    self.player_sprite, self.animation_manager
+                )
+                print("Player animations set up successfully")
+            except Exception as e:
+                print(f"Animation setup failed: {e}")
+                self.player_animation_controller = None
+        else:
+            print("No animation manager available")
+            self.player_animation_controller = None
 
         self.player_input = PlayerInputHandler(self.player_sprite)
 
@@ -107,10 +116,10 @@ class PlatformGame(arcade.Window):
         self.level_start_time = 0
         self.level_time = 0
 
-        self.sound_manager.play_music('menu')
+        if self.sound_manager:
+            self.sound_manager.play_music('menu')
 
         print('Game setup complete!')
-        return True
     
     def _initialize_asset_system(self):
         try:
@@ -125,8 +134,15 @@ class PlatformGame(arcade.Window):
             print("Initializing sound system...")
             self.sound_manager = initialize_sound_manager(self.asset_loader)
 
+            if self.sound_manager and self.asset_loader:
+                success = self.sound_manager.set_asset_loader(self.asset_loader)
+                if success:
+                    print('Sound manager properly connected to asset loader')
+                else:
+                    print('Failed to connect sound manager to asset loader')
+
             print("Initializing animation system...")
-            self.animation_manager = initiailize_animation_manager(self.asset_loader)
+            self.animation_manager = initialize_animation_manager(self.asset_loader)
 
             if not self.asset_loader.validate_critical_assets():
                 self.loading_error = "Critical assets missing"
@@ -144,14 +160,24 @@ class PlatformGame(arcade.Window):
         #Simple test level with platforms & coins, will be replaced
 
         for x in range(0, 800, settings.TILE_SIZE):  # Ground Platforms
-            wall = arcade.SpriteSolidColor(
-                settings.TILE_SIZE,
-                settings.TILE_SIZE,
-                settings.GREEN
-            )
+            wall = arcade.Sprite()
             wall.center_x = x
             wall.center_y = settings.TILE_SIZE // 2
+
+            if hasattr(self, 'asset_loader') and self.asset_loader:
+                ground_texture = self.asset_loader.get_tile_texture('ground')
+                if ground_texture:
+                    wall.texture = ground_texture
+                else:
+                    wall = arcade.SpriteSolidColor(
+                        settings.TILE_SIZE,
+                        settings.TILE_SIZE,
+                        settings.GREEN
+                    )
+                    wall.center_x = x
+                    wall.center_y =  settings.TILE_SIZE // 2
             self.wall_list.append(wall)
+
 
         platform_data = [
             (300, 150),
@@ -161,11 +187,16 @@ class PlatformGame(arcade.Window):
 
         for x, y in platform_data:
             for offset in range(0, settings.TILE_SIZE * 3, settings.TILE_SIZE):
-                wall = arcade.SpriteSolidColor(
-                    settings.TILE_SIZE,
-                    settings.TILE_SIZE,
-                    settings.GREEN
-                )
+                wall = arcade.Sprite()
+                wall.center_x = x + offset
+                wall.center_y = y
+
+                if hasattr(self, 'asset_loader') and self.asset_loader:
+                    ground_texture = self.asset_loader.get_tile_texture('ground')
+                    if ground_texture:
+                        wall.texture = ground_texture
+
+            self.wall_list.append(wall)
         
         coin_positions = [
             (200, 50, 'normal'),
@@ -210,30 +241,27 @@ class PlatformGame(arcade.Window):
                 self.menu_manager.draw()
 
     def _draw_game_world(self):
+        self.gui_camera.use()
+
+        if hasattr(self, 'asset_loader') and self.asset_loader:
+            sky_texture = self.asset_loader.get_texture('sky')
+            if sky_texture:
+                arcade.draw_texture_rect(
+                    sky_texture,
+                    arcade.XYWH(
+                        settings.SCREEN_WIDTH // 2,
+                        settings.SCREEN_HEIGHT // 2,
+                        settings.SCREEN_WIDTH,
+                        settings.SCREEN_HEIGHT
+                    )
+                )
+
         self.camera.use()
         self.wall_list.draw()
-
-        for coin in self.coin_manager.coin_list:
-            if hasattr(coin, 'coin_color'):
-                arcade.draw_lbwh_rectangle_filled(
-                    coin.center_x - settings.COIN_SIZE//2,
-                    coin.center_y - settings.COIN_SIZE//2,
-                    settings.COIN_SIZE,
-                    settings.COIN_SIZE,
-                    coin.coin_color
-                )
-
-        for enemy in self.enemy_manager.enemy_list:
-            if hasattr(enemy, 'goomba_color') and hasattr(enemy, 'goomba_size'):
-                arcade.draw_lbwh_rectangle_filled(
-                    enemy.center_x - enemy.goomba_size//2,
-                    enemy.center_y - enemy.goomba_size//2,
-                    enemy.goomba_size,
-                    enemy.goomba_size,
-                    enemy.goomba_color
-                )
-
+        self.coin_manager.coin_list.draw()
+        self.enemy_manager.enemy_list.draw()
         self.player_list.draw()
+
         self.gui_camera.use()
 
     def draw_ui(self):
@@ -327,6 +355,13 @@ class PlatformGame(arcade.Window):
     def _update_gameplay(self, delta_time):
         self.frame_count += 1
         self.level_time += delta_time
+
+        if self.player_input:
+            self.player_input.update()
+        else:
+            print("Warning: player_input is None")
+            return  # Exit early w/o essential components
+
         self.player_input.update()
         for enemy in self.enemy_manager.enemy_list:
             if enemy.state != 'dead':
@@ -360,7 +395,8 @@ class PlatformGame(arcade.Window):
         self.physics_engine.update()
         self.player_sprite.set_ground_state(self.physics_engine.can_jump())
         self.player_list.update()
-        self.animation_manager.update_all(delta_time)
+        if self.animation_manager:
+            self.animation_manager.update_all(delta_time)
 
         collection_info = self.coin_manager.update(delta_time, self.player_sprite)
         if collection_info:
