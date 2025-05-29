@@ -93,7 +93,7 @@ class AssetLoader:
             texture = self._load_texture_with_fallback(
                 player_path / filename,
                 name,
-                size=(32, 32),
+                size=(48, 48),
                 color=(255, 0, 0)
             )
             self.textures[name] = texture
@@ -119,7 +119,7 @@ class AssetLoader:
         }
 
         for name, (filename, fallback_color) in goomba_assets.items():
-            size = (24, 24) if 'large' not in name else (32, 32)
+            size = (36, 36) if 'large' not in name else (48, 48)
             texture = self._load_texture_with_fallback(
                 enemy_path / filename,
                 name,
