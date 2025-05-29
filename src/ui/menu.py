@@ -180,7 +180,7 @@ class BaseMenu:
 class MainMenu(BaseMenu):
 
     def __init__(self, screen_width, screen_height):
-        super().__init__(screen_width, screen_height, 'MARIO PlATFORMER')
+        super().__init__(screen_width, screen_height, 'BLOB PlATFORMER')
 
         self.add_item("START GAME", 'start_game')
         self.add_item("SETTINGS", 'settings')

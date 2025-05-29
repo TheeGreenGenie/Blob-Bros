@@ -1,9 +1,9 @@
 #Settings and Constants
-# ALL config values for the mario platform game
+# ALL config values for the mario-style platform game
 
 SCREEN_WIDTH = 1024
 SCREEN_HEIGHT = 768
-SCREEN_TITLE = "Mario-Style Platformer"
+SCREEN_TITLE = "Blob Platformer"
 FPS = 60
 
 GRAVITY = 0.8

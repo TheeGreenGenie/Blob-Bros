@@ -18,7 +18,7 @@ except ImportError as e:
 def main():
     #Creates and runs game
     try:
-        print("Starting Mario-style Platformer...")
+        print("Starting Blob Platformer...")
         game = PlatformGame()
         game.setup()
         print("Game initialized successfully. Press ESC to quit.")
