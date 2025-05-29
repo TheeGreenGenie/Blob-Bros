@@ -249,12 +249,40 @@ class AssetLoader:
     def _load_texture_with_fallback(self, filepath: Path, name: str, size: Tuple[int, int], color: Tuple[int, int, int]) -> arcade.Texture:
         try:
             if filepath.exists():
-                return arcade.load_texture(str(filepath))
+                original_texture = arcade.load_texture(str(filepath))
+
+                if (original_texture.width, original_texture.height) != size:
+                    if settings.DEBUG_MODE:
+                        print(f"Resizing {filepath.name}: {original_texture.width}x{original_texture.height} -> {size[0]}x{size[1]}")
+
+                    resized_texture = self._resize_texture(original_texture, size, name)
+                    return resized_texture
+                else:
+                    return original_texture
             else:
                 return self._create_colored_texture(name, size, color)
         except Exception as e:
             self.loading_errors.append(f'Failed to load {filepath}: {e}')
             return self._create_colored_texture(name, size, color)
+        
+    def _resize_texture(self, original_texture: arcade.Texture, target_size: Tuple[int, int], name: str) -> arcade.Texture:
+        try:
+            pil_image = original_texture.image
+
+            #Resize with LANCZOS if downsizing, with BICUPIC if largening
+            if target_size[0] < pil_image.width or target_size[1] < pil_image.height:
+                resample_method = Image.Resampling.LANCZOS
+            else:
+                resample_method = Image.Resampling.BICUBIC
+
+            resized_image = pil_image.resize(target_size, resample_method)
+
+            return arcade.Texture(name, resized_image)
+
+        except Exception as e:
+            print(f"Failed to resize texture {name}: {e}")
+            #falls back to og texture
+            return original_texture
 
     def _create_colored_texture(self, name: str, size: Tuple[int, int], color: Tuple[int, int, int]) -> arcade.Texture:
         try:
